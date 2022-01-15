@@ -34,7 +34,10 @@ class NoConsole:
     """Create a dummy rich console to wrap the console print"""
 
     def print(self, *args, **kwargs):
-        print(*args, **kwargs)
+        if kwargs and "text" in list(kwargs.keys()) and "menu" in list(kwargs.keys()):
+            print(kwargs["text"])
+        else:
+            print(*args, **kwargs)
 
 
 class ConsoleAndPanel:
