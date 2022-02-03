@@ -218,6 +218,7 @@ def terminal(jobs_cmds: List[str] = None):
     setup_logging()
 
     logger.info("Terminal started")
+    logger.info("jbushago hello world!")
 
     ret_code = 1
     t_controller = TerminalController(jobs_cmds)
