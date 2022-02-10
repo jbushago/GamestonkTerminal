@@ -450,4 +450,4 @@ def test_call_news(mocker):
 
 
 def test_example():
-    assert True == True
+    assert True is True
