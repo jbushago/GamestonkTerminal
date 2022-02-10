@@ -447,3 +447,6 @@ def test_call_news(mocker):
     controller.call_news(other_args=["-l=3", "-s=bbc"])
 
     mock_news.assert_called_once()
+
+def test_example():
+    assert True == True
