@@ -49,3 +49,6 @@ class TestMainHelper(unittest.TestCase):
     def test_reset(self, mock):
         # pylint: disable=unused-argument
         terminal_helper.reset()
+
+    def test_basic(self):
+        assert 1 == 2 - 1
