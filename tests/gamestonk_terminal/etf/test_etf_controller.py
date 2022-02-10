@@ -449,5 +449,6 @@ def test_call_news(mocker):
     mock_news.assert_called_once()
 
 
+@pytest.mark.vcr(record_mode="none")
 def test_example():
     assert 1 + 1 == 2
