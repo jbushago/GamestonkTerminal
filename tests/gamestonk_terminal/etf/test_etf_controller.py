@@ -448,5 +448,6 @@ def test_call_news(mocker):
 
     mock_news.assert_called_once()
 
+
 def test_example():
     assert True == True
