@@ -929,7 +929,14 @@ def export_data(
         Dataframe of data to save
     """
     if export_type:
-        export_dir = dir_path.replace("gamestonk_terminal", "exports")
+        if gtff.ENABLE_AUTOSAVE and gtff.AUTOSAVE_DIRECTORY:
+            if not os.path.exists(gtff.AUTOSAVE_DIRECTORY):
+                console.print("Autosave directory does not exist: %s", gtff.AUTOSAVE_DIRECTORY)
+                return
+
+            export_dir = gtff.AUTOSAVE_DIRECTORY
+        else:
+            export_dir = dir_path.replace("gamestonk_terminal", "exports")
 
         now = datetime.now()
         full_path = os.path.abspath(
