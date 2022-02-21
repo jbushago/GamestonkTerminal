@@ -654,17 +654,20 @@ def parse_known_args_and_warn(
         if export_allowed == EXPORT_ONLY_RAW_DATA_ALLOWED:
             choices_export = ["csv", "json", "xlsx"]
             help_export = "Export raw data into csv, json, xlsx"
+            default_export = "csv"
         elif export_allowed == EXPORT_ONLY_FIGURES_ALLOWED:
             choices_export = ["png", "jpg", "pdf", "svg"]
             help_export = "Export figure into png, jpg, pdf, svg "
+            default_export = "png"
         else:
             choices_export = ["csv", "json", "xlsx", "png", "jpg", "pdf", "svg"]
             help_export = "Export raw data into csv, json, xlsx and figure into png, jpg, pdf, svg "
+            default_export = "csv"
 
         parser.add_argument(
             "--export",
             choices=choices_export,
-            default="",
+            default=default_export if gtff.ENABLE_AUTOSAVE else "",
             type=str,
             dest="export",
             help=help_export,
