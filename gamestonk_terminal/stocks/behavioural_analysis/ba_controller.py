@@ -62,6 +62,7 @@ class BehaviouralAnalysisController(StockBaseController):
         "stats",
         "popular",
         "getdd",
+        "reddit_sent",
         "hist",
         "trend",
     ]
@@ -100,7 +101,8 @@ class BehaviouralAnalysisController(StockBaseController):
     popular       show popular tickers
     spac_c        show other users spacs announcements from subreddit SPACs community
     spac          show other users spacs announcements from other subs{has_ticker_start}
-    getdd         gets due diligence from another user's post{has_ticker_end}
+    getdd         gets due diligence from another user's post
+    reddit_sent   searches reddit for ticker and finds reddit sentiment{has_ticker_end}
 [src][Stocktwits][/src]
     trending      trending stocks
     stalker       stalk stocktwits user's last messages{has_ticker_start}
@@ -334,6 +336,59 @@ class BehaviouralAnalysisController(StockBaseController):
                     n_days=ns_parser.days,
                     show_all_flairs=ns_parser.all,
                 )
+            else:
+                console.print("No ticker loaded. Please load using 'load <ticker>'\n")
+
+    @log_start_end(log=logger)
+    def call_reddit_sent(self, other_args: List[str]):
+        """Process reddit_sent command"""
+        parser = argparse.ArgumentParser(
+            add_help=False,
+            prog="reddit_sent",
+            description="""
+                Determine general Reddit sentiment about a ticker. [Source: Reddit]
+            """,
+        )
+        # parser.add_argument(
+        #     "-l",
+        #     "--limit",
+        #     action="store",
+        #     dest="limit",
+        #     type=check_positive,
+        #     default=5,
+        #     help="limit of posts to retrieve.",
+        # )
+        # parser.add_argument(
+        #     "-d",
+        #     "--days",
+        #     action="store",
+        #     dest="days",
+        #     type=check_positive,
+        #     default=3,
+        #     help="number of prior days to look for.",
+        # )
+        # parser.add_argument(
+        #     "-a",
+        #     "--all",
+        #     action="store_true",
+        #     dest="all",
+        #     default=False,
+        #     help="""
+        #         search through all flairs (apart from Yolo and Meme), otherwise we focus on
+        #         specific flairs: DD, technical analysis, Catalyst, News, Advice, Chart""",
+        # )
+        if other_args and "-" not in other_args[0][0]:
+            other_args.insert(0, "-l")
+        ns_parser = parse_known_args_and_warn(parser, other_args)
+        if ns_parser:
+            if self.ticker:
+                console.print("reddit_sent called")
+                # reddit_view.display_due_diligence(
+                #     ticker=self.ticker,
+                #     limit=ns_parser.limit,
+                #     n_days=ns_parser.days,
+                #     show_all_flairs=ns_parser.all,
+                # )
             else:
                 console.print("No ticker loaded. Please load using 'load <ticker>'\n")
 
