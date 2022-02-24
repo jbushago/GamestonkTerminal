@@ -141,7 +141,7 @@ class SettingsController(BaseController):
         help_text += f"[param]PLOT_WIDTH_PERCENTAGE:[/param]    {cfg_plot.PLOT_WIDTH_PERCENTAGE}%\n"
         help_text += f"[param]MONITOR:[/param]                  {cfg_plot.MONITOR}\n"
         help_text += (
-            f"[param]AUTOSAVE_DIRECTORY:[/param]       {gtff.AUTOSAVE_DIRECTORY}\n"
+            f"[param]EXPORT_DIRECTORY:[/param]         {gtff.EXPORT_DIRECTORY}\n"
         )
 
         # color = "green" if gtff.USE_FLAIR else "red"
@@ -258,7 +258,9 @@ class SettingsController(BaseController):
     def call_autosave(self, _):
         """Process autosave command"""
         gtff.ENABLE_AUTOSAVE = not gtff.ENABLE_AUTOSAVE
-        dotenv.set_key(self.env_file, "GTFF_ENABLE_AUTOSAVE", str(gtff.ENABLE_AUTOSAVE))
+        dotenv.set_key(
+            self.env_file, "GTFF_ENABLE_AUTOSAVE", str(gtff.ENABLE_AUTOSAVE)
+        )
         console.print("")
 
     def call_directory(self, other_args: List[str]):
@@ -276,18 +278,29 @@ class SettingsController(BaseController):
             dest="path",
             help="path",
         )
+        parser.add_argument(
+            "-r",
+            "--reset",
+            action="store_true",
+            dest="reset",
+            help="reset directory to invalid path",
+        )
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-p")
         ns_parser = parse_known_args_and_warn(parser, other_args)
 
         if ns_parser:
+            if ns_parser.reset:
+                console.print("Directory reset successfully")
+                gtff.EXPORT_DIRECTORY = ""
+                return
             if not os.path.exists(ns_parser.path):
-                console.print("")
+                console.print(f"Directory does not exist: {ns_parser.path}")
                 return
             dotenv.set_key(
-                self.env_file, "GTFF_AUTOSAVE_DIRECTORY", str(ns_parser.path)
+                self.env_file, "GTFF_EXPORT_DIRECTORY", str(ns_parser.path)
             )
-            gtff.AUTOSAVE_DIRECTORY = ns_parser.path
+            gtff.EXPORT_DIRECTORY = ns_parser.path
             console.print("")
 
     def call_dpi(self, other_args: List[str]):

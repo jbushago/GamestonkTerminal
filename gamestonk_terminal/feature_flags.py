@@ -62,4 +62,4 @@ ENABLE_RICH_PANEL = strtobool(os.getenv("GTFF_ENABLE_RICH_PANEL", "True"))
 ENABLE_AUTOSAVE = strtobool(os.getenv("GTFF_ENABLE_AUTOSAVE", "False"))
 
 # Autosave directory for figures
-AUTOSAVE_DIRECTORY = os.getenv("GTFF_AUTOSAVE_DIRECTORY", os.path.abspath("downloads/"))
+EXPORT_DIRECTORY = os.getenv("GTFF_EXPORT_DIRECTORY", "")

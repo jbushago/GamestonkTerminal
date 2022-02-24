@@ -104,8 +104,6 @@ def print_rich_table(
     else:
         console.print(df.to_string())
 
-    local_download(df, "csv")
-
 
 def check_int_range(mini: int, maxi: int):
     """
@@ -355,8 +353,6 @@ def plot_view_stock(df: pd.DataFrame, symbol: str, interval: str):
 
     plt.show()
     console.print("")
-
-    local_download(df, "png")
 
 
 def us_market_holidays(years) -> list:
@@ -700,17 +696,19 @@ def parse_known_args_and_warn(
         if export_allowed == EXPORT_ONLY_RAW_DATA_ALLOWED:
             choices_export = ["csv", "json", "xlsx"]
             help_export = "Export raw data into csv, json, xlsx"
+            default_export = choices_export[0]
         elif export_allowed == EXPORT_ONLY_FIGURES_ALLOWED:
             choices_export = ["png", "jpg", "pdf", "svg"]
             help_export = "Export figure into png, jpg, pdf, svg "
+            default_export = choices_export[0]
         else:
             choices_export = ["csv", "json", "xlsx", "png", "jpg", "pdf", "svg"]
             help_export = "Export raw data into csv, json, xlsx and figure into png, jpg, pdf, svg "
-
+            default_export = choices_export[0]
         parser.add_argument(
             "--export",
             choices=choices_export,
-            default="",
+            default=default_export if gtff.ENABLE_AUTOSAVE else "",
             type=str,
             dest="export",
             help=help_export,
@@ -972,8 +970,14 @@ def export_data(
         Dataframe of data to save
     """
     if export_type:
-        export_dir = dir_path.replace("gamestonk_terminal", "exports")
+        if gtff.EXPORT_DIRECTORY:
+            if not os.path.exists(gtff.EXPORT_DIRECTORY):
+                console.print("Export directory does not exist: %s", gtff.EXPORT_DIRECTORY)
+                return
 
+            export_dir = gtff.EXPORT_DIRECTORY
+        else:
+            export_dir = dir_path.replace("gamestonk_terminal", "exports")
         now = datetime.now()
         full_path = os.path.abspath(
             os.path.join(
@@ -995,10 +999,11 @@ def export_data(
                     df.to_json(saved_path)
                 elif exp_type in "xlsx":
                     df.to_excel(saved_path, index=True, header=True)
-                elif exp_type in ["png", "jpg", "pdf", "svg"]:
+                elif exp_type in {"png", "jpg", "pdf", "svg"}:
                     plt.savefig(saved_path)
                 else:
                     console.print("Wrong export file specified.\n")
+                    return
 
                 console.print(f"Saved file: {saved_path}\n")
 
@@ -1089,44 +1094,3 @@ def excel_columns() -> List[str]:
         + [f"{x}{y}{z}" for x in letters for y in letters for z in letters]
     )
     return opts
-
-
-def local_download(df: pd.DataFrame, exp_type: str) -> None:
-    """
-    Downloads outputted file to autosave directory
-    set in environment file
-    """
-    if not gtff.ENABLE_AUTOSAVE:
-        return
-
-    # check if path is valid
-    if not os.path.exists(gtff.AUTOSAVE_DIRECTORY):
-        return
-
-    # avoid accessing .name if df is empty
-    try:
-        figure_name = df.name
-    except AttributeError:
-        figure_name = "DataFrame"
-
-    curr_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join(
-        gtff.AUTOSAVE_DIRECTORY, figure_name + "_" + curr_time + "." + exp_type
-    )
-
-    if exp_type == "csv":
-        df.to_csv(path)
-    elif exp_type == "json":
-        df.to_json(path)
-    elif exp_type in "xlsx":
-        df.to_excel(path, index=True, header=True)
-    elif exp_type == "png":
-        plt.savefig(path)
-    elif exp_type == "jpg":
-        plt.savefig(path)
-    elif exp_type == "pdf":
-        plt.savefig(path)
-    elif exp_type == "svg":
-        plt.savefig(path)
-    else:
-        console.print("Wrong export file specified.\n")

@@ -9,7 +9,7 @@ def test_call_directory(path_mock, set_key_mock):
     sc = settings_controller.SettingsController()
     sc.call_directory(["--path", "test-path"])
     assert set_key_mock.called_once_with(
-        sc.env_file, "GTFF_AUTOSAVE_DIRECTORY", "test-path"
+        sc.env_file, "GTFF_EXPORT_DIRECTORY", "test-path"
     )
 
 
