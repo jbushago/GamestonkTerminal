@@ -258,9 +258,7 @@ class SettingsController(BaseController):
     def call_autosave(self, _):
         """Process autosave command"""
         gtff.ENABLE_AUTOSAVE = not gtff.ENABLE_AUTOSAVE
-        dotenv.set_key(
-            self.env_file, "GTFF_ENABLE_AUTOSAVE", str(gtff.ENABLE_AUTOSAVE)
-        )
+        dotenv.set_key(self.env_file, "GTFF_ENABLE_AUTOSAVE", str(gtff.ENABLE_AUTOSAVE))
         console.print("")
 
     def call_directory(self, other_args: List[str]):
@@ -297,9 +295,7 @@ class SettingsController(BaseController):
             if not os.path.exists(ns_parser.path):
                 console.print(f"Directory does not exist: {ns_parser.path}")
                 return
-            dotenv.set_key(
-                self.env_file, "GTFF_EXPORT_DIRECTORY", str(ns_parser.path)
-            )
+            dotenv.set_key(self.env_file, "GTFF_EXPORT_DIRECTORY", str(ns_parser.path))
             gtff.EXPORT_DIRECTORY = ns_parser.path
             console.print("")
 

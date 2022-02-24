@@ -972,7 +972,9 @@ def export_data(
     if export_type:
         if gtff.EXPORT_DIRECTORY:
             if not os.path.exists(gtff.EXPORT_DIRECTORY):
-                console.print("Export directory does not exist: %s", gtff.EXPORT_DIRECTORY)
+                console.print(
+                    "Export directory does not exist: %s", gtff.EXPORT_DIRECTORY
+                )
                 return
 
             export_dir = gtff.EXPORT_DIRECTORY
