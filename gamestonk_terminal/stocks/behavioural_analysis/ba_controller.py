@@ -400,9 +400,9 @@ class BehaviouralAnalysisController(StockBaseController):
                 )
             else:
                 console.print(
-                        "No ticker loaded and no company specified. "
-                        "Please load using 'load <ticker>' or specify"
-                        "a company with -c <company>\n"
+                    "No ticker loaded and no company specified. "
+                    "Please load using 'load <ticker>' or specify"
+                    "a company with -c <company>\n"
                 )
 
     @log_start_end(log=logger)
