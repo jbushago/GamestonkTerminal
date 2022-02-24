@@ -268,3 +268,30 @@ def display_due_diligence(
         print_and_record_reddit_post({}, sub)
     if not subs:
         console.print(f"No DD posts found for {ticker}\n")
+
+
+@log_start_end(log=logger)
+def display_reddit_sent(
+    search: str, subreddits: str, time: str, dump_raw_data: bool = False
+):
+    """Determine Reddit sentiment about a search term
+
+    Parameters
+    ----------
+    search: str
+        The term being search for in Reddit
+    subreddits: str
+        A comma deliminated string of subreddits to search through
+    time: str
+        A timeframe to limit the search to (all, year, month, week, day)
+    dump_raw_data: bool
+        Outputs raw search results to the terminal
+    """
+    posts = reddit_model.get_posts_about(
+        subreddits=list(subreddits.split(",")),
+        search=search,
+        time=time,
+    )
+    if dump_raw_data:
+        for post in posts:
+            console.print(post.selftext)

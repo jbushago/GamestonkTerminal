@@ -349,48 +349,61 @@ class BehaviouralAnalysisController(StockBaseController):
                 Determine general Reddit sentiment about a ticker. [Source: Reddit]
             """,
         )
-        # parser.add_argument(
-        #     "-l",
-        #     "--limit",
-        #     action="store",
-        #     dest="limit",
-        #     type=check_positive,
-        #     default=5,
-        #     help="limit of posts to retrieve.",
-        # )
-        # parser.add_argument(
-        #     "-d",
-        #     "--days",
-        #     action="store",
-        #     dest="days",
-        #     type=check_positive,
-        #     default=3,
-        #     help="number of prior days to look for.",
-        # )
-        # parser.add_argument(
-        #     "-a",
-        #     "--all",
-        #     action="store_true",
-        #     dest="all",
-        #     default=False,
-        #     help="""
-        #         search through all flairs (apart from Yolo and Meme), otherwise we focus on
-        #         specific flairs: DD, technical analysis, Catalyst, News, Advice, Chart""",
-        # )
+        parser.add_argument(
+            "-c",
+            "--company",
+            action="store",
+            dest="company",
+            default=None,
+            help="explicit name of company to search for, will override ticker symbol",
+        )
+        parser.add_argument(
+            "-s",
+            "--subreddits",
+            action="store",
+            dest="subreddits",
+            default="all",
+            help="comma deliminated string of subreddits to search, defaults to all",
+        )
+        parser.add_argument(
+            "-t",
+            "--time",
+            action="store",
+            dest="time",
+            default="week",
+            help="time period to get posts from -- all, year, month, week, or day; defaults to day",
+        )
+        parser.add_argument(
+            "--dump-raw-data",
+            action="store_true",
+            dest="dump_raw_data",
+            default=False,
+            help="displays all the raw data from reddit",
+        )
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-l")
         ns_parser = parse_known_args_and_warn(parser, other_args)
         if ns_parser:
-            if self.ticker:
-                console.print("reddit_sent called")
-                # reddit_view.display_due_diligence(
-                #     ticker=self.ticker,
-                #     limit=ns_parser.limit,
-                #     n_days=ns_parser.days,
-                #     show_all_flairs=ns_parser.all,
-                # )
+            if ns_parser.company:
+                reddit_view.display_reddit_sent(
+                    search=ns_parser.company,
+                    subreddits=ns_parser.subreddits,
+                    time=ns_parser.time,
+                    dump_raw_data=ns_parser.dump_raw_data,
+                )
+            elif self.ticker and not ns_parser.company:
+                reddit_view.display_reddit_sent(
+                    search=self.ticker,
+                    subreddits=ns_parser.subreddits,
+                    time=ns_parser.time,
+                    dump_raw_data=ns_parser.dump_raw_data,
+                )
             else:
-                console.print("No ticker loaded. Please load using 'load <ticker>'\n")
+                console.print(
+                        "No ticker loaded and no company specified. "
+                        "Please load using 'load <ticker>' or specify"
+                        "a company with -c <company>\n"
+                )
 
     @log_start_end(log=logger)
     def call_bullbear(self, other_args: List[str]):
