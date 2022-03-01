@@ -25,6 +25,7 @@
 * [Resource Collection](#Resource-Collection-)
 * [Government](#Government-)
 * [ETF](#ETF-)
+* [Settings](#Settings-)
 
 ## Main
 
@@ -566,3 +567,32 @@ command|description
 `gainers`|show top gainers
 `decliners`|show top decliners
 `active`|show most active
+
+## Settings
+
+command|description
+---|----
+`tab`|use tabulate to print dataframes
+`cls`|clear console after each command
+`color`|use coloring features
+`flair`|cli flair
+`dt`|add date and time to command line
+`ion`|interactive matplotlib mode
+`watermark`|watermark in figures
+`promptkit`|enable prompt toolkit (autocomplete and history)
+`predict`|prediction features
+`autoscaling`|plot autoscaling
+`thoughts`|thoughts of the day
+`reporthtml`|open report as HTML otherwise notebook
+`exithelp`|automatically print help when quitting menu
+`rcontext`|remember contexts loaded params during session
+`rich`|colorful rich terminal
+`richpanel`|colorful rich terminal panel
+`dpi`|dots per inch
+`backend`|plotting backend (None, tkAgg, MacOSX, Qt5Agg)
+`height`|select plot height
+`width`|select plot width
+`pheight`|select plot percentage height
+`pwidth`|select plot percentage width
+`monitor`|which monitor to display (primary: 0, secondary: 1)
+`autosave`|download outputted figures to downloads directory
