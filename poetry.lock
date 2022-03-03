@@ -1886,6 +1886,28 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
+name = "nltk"
+version = "3.7"
+description = "Natural Language Toolkit"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+click = "*"
+joblib = "*"
+regex = ">=2021.8.3"
+tqdm = "*"
+
+[package.extras]
+all = ["numpy", "pyparsing", "scipy", "matplotlib", "twython", "requests", "scikit-learn", "python-crfsuite"]
+corenlp = ["requests"]
+machine_learning = ["numpy", "python-crfsuite", "scikit-learn", "scipy"]
+plot = ["matplotlib"]
+tgrep = ["pyparsing"]
+twitter = ["twython"]
+
+[[package]]
 name = "nodeenv"
 version = "1.6.0"
 description = "Node.js virtual environment builder"
@@ -3963,7 +3985,7 @@ prediction = ["tensorflow"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.10"
-content-hash = "a17036617d87b60e3a7c60bd68f502ae6c1c6173e904bad87f9720940902fae7"
+content-hash = "7187c7e0720dcfc4df32f801e5d00c7f5b6a13fe8d2c8820f6b9935fb47b5d12"
 
 [metadata.files]
 absl-py = [
@@ -5195,6 +5217,10 @@ nbformat = [
 nest-asyncio = [
     {file = "nest_asyncio-1.5.4-py3-none-any.whl", hash = "sha256:3fdd0d6061a2bb16f21fe8a9c6a7945be83521d81a0d15cff52e9edee50101d6"},
     {file = "nest_asyncio-1.5.4.tar.gz", hash = "sha256:f969f6013a16fadb4adcf09d11a68a4f617c6049d7af7ac2c676110169a63abd"},
+]
+nltk = [
+    {file = "nltk-3.7-py3-none-any.whl", hash = "sha256:ba3de02490308b248f9b94c8bc1ac0683e9aa2ec49ee78536d8667afb5e3eec8"},
+    {file = "nltk-3.7.zip", hash = "sha256:d6507d6460cec76d70afea4242a226a7542f85c669177b9c7f562b7cf1b05502"},
 ]
 nodeenv = [
     {file = "nodeenv-1.6.0-py2.py3-none-any.whl", hash = "sha256:621e6b7076565ddcacd2db0294c0381e01fd28945ab36bcf00f41c5daf63bef7"},
