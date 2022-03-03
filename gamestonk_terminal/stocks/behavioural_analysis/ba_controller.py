@@ -808,7 +808,7 @@ class BehaviouralAnalysisController(StockBaseController):
             add_help=False,
             prog="graphic",
             description="""
-                Display graphic of most frequenct words related to ticker. [Source: Reddit]
+                Display graphic of most frequent words related to ticker. [Source: Reddit]
             """,
         )
         parser.add_argument(
