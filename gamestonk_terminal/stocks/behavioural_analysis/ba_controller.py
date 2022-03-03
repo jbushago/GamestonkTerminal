@@ -62,6 +62,8 @@ class BehaviouralAnalysisController(StockBaseController):
         "stats",
         "popular",
         "getdd",
+        "reddit_sent",
+        "graphic",
         "hist",
         "trend",
     ]
@@ -100,7 +102,13 @@ class BehaviouralAnalysisController(StockBaseController):
     popular       show popular tickers
     spac_c        show other users spacs announcements from subreddit SPACs community
     spac          show other users spacs announcements from other subs{has_ticker_start}
+<<<<<<< Updated upstream
     getdd         gets due diligence from another user's post{has_ticker_end}
+=======
+    getdd         gets due diligence from another user's post
+    reddit_sent   searches reddit for ticker and finds reddit sentiment{has_ticker_end}
+    graphic       output graphic containing words related to ticker symbol
+>>>>>>> Stashed changes
 [src][Stocktwits][/src]
     trending      trending stocks
     stalker       stalk stocktwits user's last messages{has_ticker_start}
@@ -792,3 +800,76 @@ class BehaviouralAnalysisController(StockBaseController):
                 export=ns_parser.export,
                 number=ns_parser.number,
             )
+
+    @log_start_end(log=logger)
+    def call_graphic(self, other_args: List[str]):
+        """Process reddit_sent command"""
+        parser = argparse.ArgumentParser(
+            add_help=False,
+            prog="graphic",
+            description="""
+                Display graphic of most frequenct words related to ticker. [Source: Reddit]
+            """,
+        )
+        parser.add_argument(
+            "-c",
+            "--company",
+            action="store",
+            dest="company",
+            default=None,
+            help="explicit name of company to search for, will override ticker symbol",
+        )
+        parser.add_argument(
+            "-s",
+            "--subreddits",
+            action="store",
+            dest="subreddits",
+            default="all",
+            help="comma deliminated string of subreddits to search, defaults to all",
+        )
+        parser.add_argument(
+            "-t",
+            "--time",
+            action="store",
+            dest="time",
+            default="week",
+            help="time period to get posts from -- all, year, month, week, or day; defaults to day",
+        )
+        parser.add_argument(
+            "-g",
+            "--graphic",
+            action="store",
+            dest="graphic",
+            choices=["wordcloud", "histogram"],
+            default="histogram",
+            help="graphic type to output",
+        )
+        if other_args and "-" not in other_args[0][0]:
+            other_args.insert(0, "-l")
+        ns_parser = parse_known_args_and_warn(
+            parser, other_args, EXPORT_BOTH_RAW_DATA_AND_FIGURES
+        )
+        # ns_parser = parse_known_args_and_warn(parser, other_args)
+        if ns_parser:
+            if ns_parser.company:
+                reddit_view.display_reddit_graphic(
+                    search=ns_parser.company,
+                    subreddits=ns_parser.subreddits,
+                    time=ns_parser.time,
+                    graph_type=ns_parser.graphic,
+                    export=ns_parser.export,
+                )
+            elif self.ticker and not ns_parser.company:
+                reddit_view.display_reddit_graphic(
+                    search=self.ticker,
+                    subreddits=ns_parser.subreddits,
+                    time=ns_parser.time,
+                    graph_type=ns_parser.graphic,
+                    export=ns_parser.export,
+                )
+            else:
+                console.print(
+                    "No ticker loaded and no company specified. "
+                    "Please load using 'load <ticker>' or specify"
+                    "a company with -c <company>\n"
+                )
