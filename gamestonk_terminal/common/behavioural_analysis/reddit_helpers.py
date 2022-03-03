@@ -6,15 +6,17 @@ import re
 
 import praw
 
+
 def find_all_body_tickers(ls_text: List[str]) -> List[str]:
     l_tickers_found = []
     for s_text in ls_text:
-        print("s_text == "+s_text)
-        for s_ticker in set(re.findall(r'(?<=\$)\w+|[A-Z]{3,6}', s_text)):
+        print("s_text == " + s_text)
+        for s_ticker in set(re.findall(r"(?<=\$)\w+|[A-Z]{3,6}", s_text)):
             print(s_ticker)
             l_tickers_found.append(s_ticker.strip())
 
     return l_tickers_found
+
 
 def find_tickers(submission: praw.models.reddit.submission.Submission) -> List[str]:
     """Extracts potential tickers from reddit submission
