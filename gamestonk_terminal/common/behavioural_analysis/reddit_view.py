@@ -11,6 +11,12 @@ import finviz
 import pandas as pd
 import praw
 
+import nltk
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
+
 from gamestonk_terminal.common.behavioural_analysis import reddit_model
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import export_data, print_rich_table
@@ -268,3 +274,78 @@ def display_due_diligence(
         print_and_record_reddit_post({}, sub)
     if not subs:
         console.print(f"No DD posts found for {ticker}\n")
+
+
+@log_start_end(log=logger)
+def display_reddit_graphic(
+    search: str, subreddits: str, time: str, graph_type: str, export: str = ""
+):
+    """Determine Reddit sentiment about a search term
+
+    Parameters
+    ----------
+    search: str
+        The term being search for in Reddit
+    subreddits: str
+        A comma deliminated string of subreddits to search through
+    time: str
+        A timeframe to limit the search to (all, year, month, week, day)
+    dump_raw_data: bool
+        Outputs raw search results to the terminal
+    """
+
+    # TODO subreddits arg unused
+    subs = ["investing", "wallstreetbets", "stocks", "pennystocks", "GME", "robinhood"]
+    posts = reddit_model.get_posts_about(
+        subreddits=subs,
+        search=search,
+        time=time,
+    )
+
+    nltk.download("stopwords")
+    tk = nltk.tokenize.RegexpTokenizer(r"\w+")
+    stop_words = nltk.corpus.stopwords.words("english")
+    blacklist = {"market", "stock", "company", "https", "imgur", "com", "stocks"}
+
+    words = []
+
+    console.print("")
+    for post in tqdm(posts):
+        ls_text = [post.selftext, post.title]
+        post.comments.replace_more(limit=0)
+        for comment in post.comments.list():
+            ls_text.append(comment.body)
+
+        tokens = tk.tokenize(" ".join(ls_text))
+        for char in tokens:
+            if char not in stop_words and char not in blacklist:
+                words.append(char)
+
+    if graph_type == "wordcloud":
+        df = pd.Series(words)
+
+        wc = WordCloud(width=1000, height=600, max_words=100, background_color="black")
+        strcat = " ".join(word for word in words)
+        wc.generate(strcat)
+
+        plt.figure(figsize=(20, 10), facecolor="k")
+        plt.imshow(wc, interpolation="bilinear")
+        plt.axis("off")
+        plt.show()
+        console.print("")
+        export_data(
+            export,
+            os.path.dirname(os.path.abspath(__file__)),
+            "reddit graphic",
+            df,
+        )
+    elif graph_type == "histogram":
+        df = pd.Series(words[0:20])
+        df.value_counts().plot(kind="bar")
+        console.print("")
+        export_data(
+            export,
+            os.path.dirname(os.path.abspath(__file__)),
+            "reddit graphic",
+            df,
+        )
