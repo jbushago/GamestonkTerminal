@@ -7,6 +7,7 @@ import warnings
 from datetime import datetime
 from typing import Dict
 
+from typing import List
 import finviz
 import pandas as pd
 import praw
@@ -15,7 +16,6 @@ import nltk
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from typing import List
 
 from gamestonk_terminal.common.behavioural_analysis import reddit_model
 from gamestonk_terminal.decorators import log_start_end
@@ -281,15 +281,8 @@ def display_reddit_graphic(
     search: str,
     time: str,
     graph_type: str,
+    subreddits: List[str],
     export: str = "",
-    subreddits: List[str] = [
-        "investing",
-        "wallstreetbets",
-        "stocks",
-        "pennystocks",
-        "GME",
-        "robinhood",
-    ],
 ):
     """Determine Reddit sentiment about a search term
 
@@ -304,8 +297,18 @@ def display_reddit_graphic(
     dump_raw_data: bool
         Outputs raw search results to the terminal
     """
+
+    if subreddits:
+        console.print("")
     posts = reddit_model.get_posts_about(
-        subreddits=subreddits,
+        subreddits=[
+            "investing",
+            "wallstreetbets",
+            "stocks",
+            "pennystocks",
+            "GME",
+            "robinhood",
+        ],
         search=search,
         time=time,
     )
