@@ -102,13 +102,9 @@ class BehaviouralAnalysisController(StockBaseController):
     popular       show popular tickers
     spac_c        show other users spacs announcements from subreddit SPACs community
     spac          show other users spacs announcements from other subs{has_ticker_start}
-<<<<<<< Updated upstream
     getdd         gets due diligence from another user's post{has_ticker_end}
-=======
-    getdd         gets due diligence from another user's post
     reddit_sent   searches reddit for ticker and finds reddit sentiment{has_ticker_end}
     graphic       output graphic containing words related to ticker symbol
->>>>>>> Stashed changes
 [src][Stocktwits][/src]
     trending      trending stocks
     stalker       stalk stocktwits user's last messages{has_ticker_start}
