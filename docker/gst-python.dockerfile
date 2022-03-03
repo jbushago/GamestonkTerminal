@@ -1,7 +1,5 @@
 FROM python:3.8-slim-buster
 
-LABEL org.opencontainers.image.source https://github.com/GamestonkTerminal/GamestonkTerminal
-
 RUN  apt-get update && apt-get -y install --no-install-recommends \
   gcc \
   g++ \
