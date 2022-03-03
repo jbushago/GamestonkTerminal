@@ -1,7 +1,6 @@
 """Reddit View"""
 __docformat__ = "numpy"
 
-from ast import dump
 import logging
 import os
 import warnings
