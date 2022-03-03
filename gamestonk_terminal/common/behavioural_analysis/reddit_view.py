@@ -1,6 +1,7 @@
 """Reddit View"""
 __docformat__ = "numpy"
 
+from ast import dump
 import logging
 import os
 import warnings
@@ -10,6 +11,7 @@ from typing import Dict
 import finviz
 import pandas as pd
 import praw
+from tqdm import tqdm
 
 from gamestonk_terminal.common.behavioural_analysis import reddit_model
 from gamestonk_terminal.decorators import log_start_end
@@ -272,7 +274,11 @@ def display_due_diligence(
 
 @log_start_end(log=logger)
 def display_reddit_sent(
-    search: str, subreddits: str, time: str, dump_raw_data: bool = False
+    search: str,
+    subreddits: str,
+    time: str,
+    dump_raw_data: bool = False,
+    export: str = "",
 ):
     """Determine Reddit sentiment about a search term
 
@@ -292,6 +298,45 @@ def display_reddit_sent(
         search=search,
         time=time,
     )
-    if dump_raw_data:
-        for post in posts:
-            console.print(post.selftext)
+
+    # if dump_raw_data:
+    #    for post in posts:
+    #        console.print(post.selftext)
+
+    post_data = []
+    columns = [
+        "Title",
+        "Flair",
+        "Score",
+        "# Comments",
+        "Upvote %",
+        "Self text",
+        "Comment List",
+    ]
+
+    console.print("")
+    for post in tqdm(posts):
+        data = [
+            post.title,
+            post.link_flair_text,
+            post.score,
+            post.num_comments,
+            f"{round(100 * post.upvote_ratio)}%",
+            post.selftext if dump_raw_data else "",
+            post.comments.list() if dump_raw_data else "",
+        ]
+        post_data.append(data)
+
+    df = pd.DataFrame(post_data, columns=columns)
+    console.print("")
+
+    print_rich_table(
+        df, headers=list(df.columns), show_index=False, title="Reddit Debug Dump"
+    )
+
+    export_data(
+        export,
+        os.path.dirname(os.path.abspath(__file__)),
+        "debug dump",
+        df,
+    )
