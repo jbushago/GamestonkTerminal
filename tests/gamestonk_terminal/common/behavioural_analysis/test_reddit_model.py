@@ -1,6 +1,3 @@
-import pytest
-
-
 def test_get_watchlists():
     pass
 
