@@ -3,7 +3,6 @@ __docformat__ = "numpy"
 
 import logging
 import os
-from subprocess import SubprocessError
 import warnings
 from datetime import datetime
 from typing import Dict
