@@ -1,25 +1,22 @@
 import pytest
 
-def test_display_popular_tickers():
+def test_get_watchlists():
     pass
 
-def test_print_and_record_reddit_post():
+def test_get_popular_tickers():
     pass
 
-def test_display_watchlist():
+def test_get_spac_community():
     pass
 
-def test_display_spac_community():
+def test_get_spac():
     pass
 
-def test_display_spac():
+def test_get_wsb_community():
     pass
 
-def test_display_wsb_community():
+def test_get_due_dilligence():
     pass
 
-def test_display_due_diligence():
-    pass
-
-def test_display_reddit_sent():
+def test_get_posts_about():
     pass
