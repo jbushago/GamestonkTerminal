@@ -516,3 +516,37 @@ def get_due_dilligence(
             break
 
     return subs
+
+
+@log_start_end(log=logger)
+def get_posts_about(
+    subreddits: List[str], search: str, time: str
+) -> List[praw.models.reddit.submission.Submission]:
+    """Finds posts related to a specific search term in Reddit
+
+    Parameters
+    ----------
+    subreddits: List[str]
+        List of strings specifying what subreddits to search through
+    search: str
+        String to search for
+    time: str
+        A timeframe to limit the search to (all, year, month, week, day)
+
+    Returns
+    -------
+    List[praw.models.reddit.submission.Submission]
+        List of submissions related to the search term
+    """
+    praw_api = praw.Reddit(
+        client_id=cfg.API_REDDIT_CLIENT_ID,
+        client_secret=cfg.API_REDDIT_CLIENT_SECRET,
+        username=cfg.API_REDDIT_USERNAME,
+        user_agent=cfg.API_REDDIT_USER_AGENT,
+        password=cfg.API_REDDIT_PASSWORD,
+    )
+    sub_str = "+".join(subreddits)
+    subreddit = praw_api.subreddit(sub_str)
+    posts = subreddit.search(search, limit=100, time_filter=time)
+    posts = [p for p in posts if p.selftext]
+    return posts
