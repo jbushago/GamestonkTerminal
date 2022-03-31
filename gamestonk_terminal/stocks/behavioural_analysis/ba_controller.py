@@ -380,6 +380,13 @@ class BehaviouralAnalysisController(StockBaseController):
             default=False,
             help="displays all the raw data from reddit",
         )
+        parser.add_argument(
+            "--dump-preprocessed-data",
+            action="store_true",
+            dest="dump_preprocessed_data",
+            default=False,
+            help="displays cleaned and stemmed reddit data",
+        )
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-l")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -390,6 +397,7 @@ class BehaviouralAnalysisController(StockBaseController):
                     subreddits=ns_parser.subreddits,
                     time=ns_parser.time,
                     dump_raw_data=ns_parser.dump_raw_data,
+                    dump_preprocessed_data=ns_parser.dump_preprocessed_data,
                 )
             elif self.ticker and not ns_parser.company:
                 reddit_view.display_reddit_sent(
@@ -397,6 +405,7 @@ class BehaviouralAnalysisController(StockBaseController):
                     subreddits=ns_parser.subreddits,
                     time=ns_parser.time,
                     dump_raw_data=ns_parser.dump_raw_data,
+                    dump_preprocessed_data=ns_parser.dump_preprocessed_data,
                 )
             else:
                 console.print(
