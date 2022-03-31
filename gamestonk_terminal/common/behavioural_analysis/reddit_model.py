@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
 import finviz
+from nltk.stem import PorterStemmer
 import pandas as pd
 import praw
 from prawcore.exceptions import ResponseException
@@ -550,3 +551,30 @@ def get_posts_about(
     posts = subreddit.search(search, limit=100, time_filter=time)
     posts = [p for p in posts if p.selftext]
     return posts
+
+
+@log_start_end(log=logger)
+def prepare_corpus(docs: List[str]) -> List[str]:
+    """Cleans and prepares a list of documents for sentiment analysis
+
+    Parameters
+    ----------
+    docs: List[str]
+        A list of documents to prepare for sentiment analysis
+
+    Returns
+    -------
+    List[str]
+        List of cleaned and prepared docs
+    """
+    docs = [doc.lower().strip() for doc in docs]
+    stemmer = PorterStemmer()
+    docs = [stemmer.stem(doc) for doc in docs]
+    def clean_text(doc):
+        out = []
+        for c in doc:
+            if c.isalpha() or c.isspace():
+                out.append(c)
+        return "".join(out)
+    docs = [clean_text(doc) for doc in docs]
+    return docs
