@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
 import finviz
-from nltk.stem import PorterStemmer
 import pandas as pd
 import praw
 from prawcore.exceptions import ResponseException
@@ -568,8 +567,6 @@ def prepare_corpus(docs: List[str]) -> List[str]:
         List of cleaned and prepared docs
     """
     docs = [doc.lower().strip() for doc in docs]
-    stemmer = PorterStemmer()
-    docs = [stemmer.stem(doc) for doc in docs]
 
     def clean_text(doc):
         out = []
