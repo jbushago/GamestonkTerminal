@@ -109,8 +109,8 @@ def get_ticker_sector(ticker: str) -> str:
     str
         sector of ticker
     """
-    ticker = yf.Ticker(ticker)
-    info = ticker.info
+    yf_ticker = yf.Ticker(ticker)
+    info = yf_ticker.info
     return info["sector"] if "sector" in info else ""
 
 
