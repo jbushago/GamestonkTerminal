@@ -15,7 +15,7 @@ from gamestonk_terminal.cryptocurrency.defi import terraengineer_model
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import (
     export_data,
-    long_number_format,
+    lambda_long_number_format,
     plot_autoscale,
 )
 
@@ -33,7 +33,7 @@ def display_terra_asset_history(
     external_axes: Optional[List[plt.Axes]] = None,
 ) -> None:
     """Displays the 30-day history of specified asset in terra address
-    [Source: https://docs.llama.fi/api]
+    [Source: https://terra.engineer/]
 
     Parameters
     ----------
@@ -56,6 +56,7 @@ def display_terra_asset_history(
         _, ax = plt.subplots(figsize=plot_autoscale(), dpi=PLOT_DPI)
     else:
         if len(external_axes) != 1:
+            logger.error("Expected list of one axis item.")
             console.print("[red]Expected list of one axis item./n[/red]")
             return
         (ax,) = external_axes
@@ -64,7 +65,7 @@ def display_terra_asset_history(
     ax.set_ylabel(f"{asset.upper()} Amount")
     ax.set_title(f"{asset.upper()} Amount in {address}")
     ax.get_yaxis().set_major_formatter(
-        ticker.FuncFormatter(lambda x, _: long_number_format(x))
+        ticker.FuncFormatter(lambda x, _: lambda_long_number_format(x))
     )
 
     cfg.theme.style_primary_axis(ax)
@@ -85,7 +86,7 @@ def display_anchor_yield_reserve(
     export: str = "", external_axes: Optional[List[plt.Axes]] = None
 ) -> None:
     """Displays the 30-day history of the Anchor Yield Reserve.
-    [Source: https://docs.llama.fi/api]
+    [Source: https://terra.engineer/]
 
     Parameters
     ----------
@@ -104,6 +105,7 @@ def display_anchor_yield_reserve(
         _, ax = plt.subplots(figsize=plot_autoscale(), dpi=PLOT_DPI)
     else:
         if len(external_axes) != 1:
+            logger.error("Expected list of one axis item.")
             console.print("[red]Expected list of one axis item./n[/red]")
             return
         (ax,) = external_axes
@@ -112,7 +114,7 @@ def display_anchor_yield_reserve(
     ax.set_ylabel("UST Amount")
     ax.set_title("Anchor UST Yield Reserve")
     ax.get_yaxis().set_major_formatter(
-        ticker.FuncFormatter(lambda x, _: long_number_format(x))
+        ticker.FuncFormatter(lambda x, _: lambda_long_number_format(x))
     )
 
     cfg.theme.style_primary_axis(ax)

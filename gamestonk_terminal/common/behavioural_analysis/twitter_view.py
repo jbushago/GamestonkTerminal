@@ -160,6 +160,7 @@ def display_sentiment(
         ax1, ax2 = axes
     else:
         if len(external_axes) != 2:
+            logger.error("Expected list of one axis item.")
             console.print("[red]Expected list of one axis item./n[/red]")
             return
         (ax1, ax2) = external_axes
@@ -192,7 +193,7 @@ def display_sentiment(
     ax1.set_title(
         f"Twitter's {ticker} total compound sentiment over time is {round(np.sum(df_tweets['sentiment']), 2)}"
     )
-    ax1.legend()
+
     theme.style_primary_axis(ax1)
 
     ax2.set_ylabel("VADER Polarity Scores")

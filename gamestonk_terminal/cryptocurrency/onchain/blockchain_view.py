@@ -15,7 +15,7 @@ from gamestonk_terminal.cryptocurrency.onchain import blockchain_model
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import (
     export_data,
-    long_number_format,
+    lambda_long_number_format,
     plot_autoscale,
 )
 from gamestonk_terminal.rich_config import console
@@ -55,6 +55,7 @@ def display_btc_circulating_supply(
         _, ax = plt.subplots(figsize=plot_autoscale(), dpi=PLOT_DPI)
     else:
         if len(external_axes) != 1:
+            logger.error("Expected list of one axis item.")
             console.print("[red]Expected list of one axis item./n[/red]")
             return
         (ax,) = external_axes
@@ -63,7 +64,7 @@ def display_btc_circulating_supply(
     ax.set_ylabel("BTC")
     ax.set_title("BTC Circulating Supply")
     ax.get_yaxis().set_major_formatter(
-        ticker.FuncFormatter(lambda x, _: long_number_format(x))
+        ticker.FuncFormatter(lambda x, _: lambda_long_number_format(x))
     )
 
     if not external_axes:
@@ -109,6 +110,7 @@ def display_btc_confirmed_transactions(
         _, ax = plt.subplots(figsize=plot_autoscale(), dpi=PLOT_DPI)
     else:
         if len(external_axes) != 1:
+            logger.error("Expected list of one axis item.")
             console.print("[red]Expected list of one axis item./n[/red]")
             return
         (ax,) = external_axes
@@ -117,7 +119,7 @@ def display_btc_confirmed_transactions(
     ax.set_ylabel("Transactions")
     ax.set_title("BTC Confirmed Transactions")
     ax.get_yaxis().set_major_formatter(
-        ticker.FuncFormatter(lambda x, _: long_number_format(x))
+        ticker.FuncFormatter(lambda x, _: lambda_long_number_format(x))
     )
 
     theme.style_primary_axis(ax)

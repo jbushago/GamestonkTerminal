@@ -7,17 +7,16 @@ import re
 
 import pandas as pd
 
-from gamestonk_terminal import feature_flags as gtff
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import export_data, print_rich_table
 from gamestonk_terminal.rich_config import console
 from gamestonk_terminal.stocks.discovery import fidelity_model
+from gamestonk_terminal import rich_config
 
 logger = logging.getLogger(__name__)
 
 
-@log_start_end(log=logger)
-def buy_sell_ratio_color_red_green(val: str) -> str:
+def lambda_buy_sell_ratio_color_red_green(val: str) -> str:
     """Add color tags to the Buys/Sells ratio cell
 
     Parameters
@@ -45,8 +44,7 @@ def buy_sell_ratio_color_red_green(val: str) -> str:
     return f"{buys}% Buys, [red]{sells}%[/red] Sells"
 
 
-@log_start_end(log=logger)
-def price_change_color_red_green(val: str) -> str:
+def lambda_price_change_color_red_green(val: str) -> str:
     """Add color tags to the price change cell
 
     Parameters
@@ -81,12 +79,12 @@ def orders_view(num: int, export: str):
 
     pd.set_option("display.max_colwidth", None)
 
-    if gtff.USE_COLOR:
+    if rich_config.USE_COLOR:
         df_orders["Buy / Sell Ratio"] = df_orders["Buy / Sell Ratio"].apply(
-            buy_sell_ratio_color_red_green
+            lambda_buy_sell_ratio_color_red_green
         )
         df_orders["Price Change"] = df_orders["Price Change"].apply(
-            price_change_color_red_green
+            lambda_price_change_color_red_green
         )
 
     df_orders = df_orders.head(n=num).iloc[:, :-1]

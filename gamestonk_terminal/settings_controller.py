@@ -1,20 +1,22 @@
 """Settings Controller Module"""
 __docformat__ = "numpy"
 
-import os
 import argparse
 import logging
-from typing import List
+import os
 from pathlib import Path
-import dotenv
+from typing import List
 
+import dotenv
 from prompt_toolkit.completion import NestedCompleter
-from gamestonk_terminal.rich_config import console
-from gamestonk_terminal import feature_flags as gtff
+
 from gamestonk_terminal import config_plot as cfg_plot
-from gamestonk_terminal.parent_classes import BaseController
+from gamestonk_terminal import feature_flags as gtff
+from gamestonk_terminal.decorators import log_start_end
+from gamestonk_terminal.helper_funcs import get_flair, parse_known_args_and_warn
 from gamestonk_terminal.menu import session
-from gamestonk_terminal.helper_funcs import parse_known_args_and_warn, get_flair
+from gamestonk_terminal.parent_classes import BaseController
+from gamestonk_terminal.rich_config import console
 
 # pylint: disable=too-many-lines,no-member,too-many-public-methods,C0302
 
@@ -26,6 +28,7 @@ class SettingsController(BaseController):
     """Settings Controller class"""
 
     CHOICES_COMMANDS: List[str] = [
+        "logcollection",
         "tab",
         "cls",
         "color",
@@ -33,6 +36,7 @@ class SettingsController(BaseController):
         "dt",
         "ion",
         "watermark",
+        "cmdloc",
         "promptkit",
         "predict",
         "autoscaling",
@@ -72,7 +76,9 @@ class SettingsController(BaseController):
 
     def print_help(self):
         """Print help"""
-        help_text = "\n[info]Feature flags through environment variables:[/info]\n"
+        help_text = "\n[info]Feature flags through environment variables:[/info]\n\n"
+        color = "green" if gtff.LOG_COLLECTION else "red"
+        help_text += f"   [{color}]logcollection    allow logs to be sent[/{color}]\n\n"
         color = "green" if gtff.USE_TABULATE_DF else "red"
         help_text += (
             f"   [{color}]tab              use tabulate to print dataframes[/{color}]\n"
@@ -107,6 +113,8 @@ class SettingsController(BaseController):
         )
         color = "green" if gtff.USE_WATERMARK else "red"
         help_text += f"   [{color}]watermark        watermark in figures[/{color}]\n"
+        color = "green" if gtff.USE_CMD_LOCATION_FIGURE else "red"
+        help_text += f"   [{color}]cmdloc           command location displayed in figures[/{color}]\n"
         color = "green" if gtff.USE_PLOT_AUTOSCALING else "red"
         help_text += f"   [{color}]autoscaling      plot autoscaling[/{color}]\n"
         color = "green" if gtff.ENABLE_AUTOSAVE else "red"
@@ -149,12 +157,21 @@ class SettingsController(BaseController):
 
         console.print(text=help_text, menu="Settings")
 
+    @log_start_end(log=logger)
+    def call_logcollection(self, _):
+        """Process logcollection command"""
+        gtff.LOG_COLLECTION = not gtff.LOG_COLLECTION
+        dotenv.set_key(self.env_file, "GTFF_LOG_COLLECTION", str(gtff.LOG_COLLECTION))
+        console.print("")
+
+    @log_start_end(log=logger)
     def call_tab(self, _):
         """Process tab command"""
         gtff.USE_TABULATE_DF = not gtff.USE_TABULATE_DF
         dotenv.set_key(self.env_file, "GTFF_USE_TABULATE_DF", str(gtff.USE_TABULATE_DF))
         console.print("")
 
+    @log_start_end(log=logger)
     def call_cls(self, _):
         """Process cls command"""
         gtff.USE_CLEAR_AFTER_CMD = not gtff.USE_CLEAR_AFTER_CMD
@@ -163,12 +180,14 @@ class SettingsController(BaseController):
         )
         console.print("")
 
+    @log_start_end(log=logger)
     def call_color(self, _):
         """Process color command"""
         gtff.USE_COLOR = not gtff.USE_COLOR
         dotenv.set_key(self.env_file, "GTFF_USE_COLOR", str(gtff.USE_COLOR))
         console.print("")
 
+    @log_start_end(log=logger)
     def call_promptkit(self, _):
         """Process promptkit command"""
         gtff.USE_PROMPT_TOOLKIT = not gtff.USE_PROMPT_TOOLKIT
@@ -177,12 +196,14 @@ class SettingsController(BaseController):
         )
         console.print("")
 
+    @log_start_end(log=logger)
     def call_predict(self, _):
         """Process predict command"""
         gtff.ENABLE_PREDICT = not gtff.ENABLE_PREDICT
         dotenv.set_key(self.env_file, "GTFF_ENABLE_PREDICT", str(gtff.ENABLE_PREDICT))
         console.print("")
 
+    @log_start_end(log=logger)
     def call_thoughts(self, _):
         """Process thoughts command"""
         gtff.ENABLE_THOUGHTS_DAY = not gtff.ENABLE_THOUGHTS_DAY
@@ -191,6 +212,7 @@ class SettingsController(BaseController):
         )
         console.print("")
 
+    @log_start_end(log=logger)
     def call_reporthtml(self, _):
         """Process reporthtml command"""
         gtff.OPEN_REPORT_AS_HTML = not gtff.OPEN_REPORT_AS_HTML
@@ -199,6 +221,7 @@ class SettingsController(BaseController):
         )
         console.print("")
 
+    @log_start_end(log=logger)
     def call_exithelp(self, _):
         """Process exithelp command"""
         gtff.ENABLE_EXIT_AUTO_HELP = not gtff.ENABLE_EXIT_AUTO_HELP
@@ -207,6 +230,7 @@ class SettingsController(BaseController):
         )
         console.print("")
 
+    @log_start_end(log=logger)
     def call_rcontext(self, _):
         """Process rcontext command"""
         gtff.REMEMBER_CONTEXTS = not gtff.REMEMBER_CONTEXTS
@@ -215,18 +239,21 @@ class SettingsController(BaseController):
         )
         console.print("")
 
+    @log_start_end(log=logger)
     def call_dt(self, _):
         """Process dt command"""
         gtff.USE_DATETIME = not gtff.USE_DATETIME
         dotenv.set_key(self.env_file, "GTFF_USE_DATETIME", str(gtff.USE_DATETIME))
         console.print("")
 
+    @log_start_end(log=logger)
     def call_rich(self, _):
         """Process rich command"""
         gtff.ENABLE_RICH = not gtff.ENABLE_RICH
         dotenv.set_key(self.env_file, "GTFF_ENABLE_RICH", str(gtff.ENABLE_RICH))
         console.print("")
 
+    @log_start_end(log=logger)
     def call_richpanel(self, _):
         """Process richpanel command"""
         gtff.ENABLE_RICH_PANEL = not gtff.ENABLE_RICH_PANEL
@@ -235,18 +262,32 @@ class SettingsController(BaseController):
         )
         console.print("")
 
+    @log_start_end(log=logger)
     def call_ion(self, _):
         """Process ion command"""
         gtff.USE_ION = not gtff.USE_ION
         dotenv.set_key(self.env_file, "GTFF_USE_ION", str(gtff.USE_ION))
         console.print("")
 
+    @log_start_end(log=logger)
     def call_watermark(self, _):
         """Process watermark command"""
         gtff.USE_WATERMARK = not gtff.USE_WATERMARK
         dotenv.set_key(self.env_file, "GTFF_USE_WATERMARK", str(gtff.USE_WATERMARK))
         console.print("")
 
+    @log_start_end(log=logger)
+    def call_cmdloc(self, _):
+        """Process cmdloc command"""
+        gtff.USE_CMD_LOCATION_FIGURE = not gtff.USE_CMD_LOCATION_FIGURE
+        dotenv.set_key(
+            self.env_file,
+            "GTFF_USE_CMD_LOCATION_FIGURE",
+            str(gtff.USE_CMD_LOCATION_FIGURE),
+        )
+        console.print("")
+
+    @log_start_end(log=logger)
     def call_autoscaling(self, _):
         """Process autoscaling command"""
         gtff.USE_PLOT_AUTOSCALING = not gtff.USE_PLOT_AUTOSCALING
@@ -299,6 +340,7 @@ class SettingsController(BaseController):
             gtff.EXPORT_DIRECTORY = ns_parser.path
             console.print("")
 
+    @log_start_end(log=logger)
     def call_dpi(self, other_args: List[str]):
         """Process dpi command"""
         parser = argparse.ArgumentParser(
@@ -322,6 +364,7 @@ class SettingsController(BaseController):
             cfg_plot.PLOT_DPI = ns_parser.value
             console.print("")
 
+    @log_start_end(log=logger)
     def call_height(self, other_args: List[str]):
         """Process height command"""
         parser = argparse.ArgumentParser(
@@ -345,6 +388,7 @@ class SettingsController(BaseController):
             cfg_plot.PLOT_HEIGHT = ns_parser.value
             console.print("")
 
+    @log_start_end(log=logger)
     def call_width(self, other_args: List[str]):
         """Process width command"""
         parser = argparse.ArgumentParser(
@@ -368,6 +412,7 @@ class SettingsController(BaseController):
             cfg_plot.PLOT_WIDTH = ns_parser.value
             console.print("")
 
+    @log_start_end(log=logger)
     def call_pheight(self, other_args: List[str]):
         """Process pheight command"""
         parser = argparse.ArgumentParser(
@@ -393,6 +438,7 @@ class SettingsController(BaseController):
             cfg_plot.PLOT_HEIGHT_PERCENTAGE = ns_parser.value
             console.print("")
 
+    @log_start_end(log=logger)
     def call_pwidth(self, other_args: List[str]):
         """Process pwidth command"""
         parser = argparse.ArgumentParser(
@@ -418,6 +464,7 @@ class SettingsController(BaseController):
             cfg_plot.PLOT_WIDTH_PERCENTAGE = ns_parser.value
             console.print("")
 
+    @log_start_end(log=logger)
     def call_monitor(self, other_args: List[str]):
         """Process pwidth command"""
         parser = argparse.ArgumentParser(
@@ -441,6 +488,7 @@ class SettingsController(BaseController):
             cfg_plot.MONITOR = ns_parser.value
             console.print("")
 
+    @log_start_end(log=logger)
     def call_backend(self, other_args: List[str]):
         """Process backend command"""
         parser = argparse.ArgumentParser(

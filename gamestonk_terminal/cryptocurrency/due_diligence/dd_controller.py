@@ -3,37 +3,42 @@ __docformat__ = "numpy"
 
 # pylint: disable=R0904, C0302, W0622, C0201
 import argparse
-from typing import List
+import logging
 from datetime import datetime, timedelta
+from typing import List
+
 import pandas as pd
 from prompt_toolkit.completion import NestedCompleter
-from gamestonk_terminal.rich_config import console
-from gamestonk_terminal.parent_classes import CryptoBaseController
-from gamestonk_terminal.cryptocurrency.due_diligence import (
-    coinglass_model,
-    glassnode_model,
-)
-from gamestonk_terminal import feature_flags as gtff
-from gamestonk_terminal.menu import session
-from gamestonk_terminal.cryptocurrency.crypto_controller import CRYPTO_SOURCES
 
+from gamestonk_terminal import feature_flags as gtff
+from gamestonk_terminal.cryptocurrency.crypto_controller import CRYPTO_SOURCES
 from gamestonk_terminal.cryptocurrency.due_diligence import (
-    coinglass_view,
-    glassnode_view,
-    pycoingecko_view,
-    coinpaprika_view,
+    binance_model,
     binance_view,
     coinbase_model,
-    binance_model,
     coinbase_view,
+    coinglass_model,
+    coinglass_view,
+    coinpaprika_view,
+    glassnode_model,
+    glassnode_view,
+    pycoingecko_view,
+    messari_model,
+    messari_view,
 )
+from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import (
     EXPORT_BOTH_RAW_DATA_AND_FIGURES,
     EXPORT_ONLY_RAW_DATA_ALLOWED,
-    parse_known_args_and_warn,
     check_positive,
+    parse_known_args_and_warn,
     valid_date,
 )
+from gamestonk_terminal.menu import session
+from gamestonk_terminal.parent_classes import CryptoBaseController
+from gamestonk_terminal.rich_config import console
+
+logger = logging.getLogger(__name__)
 
 FILTERS_VS_USD_BTC = ["usd", "btc"]
 
@@ -68,12 +73,14 @@ class DueDiligenceController(CryptoBaseController):
             "balance",
         ],
         "cb": ["cbbook", "trades", "stats"],
+        "mes": ["mcapdom"],
     }
 
     DD_VIEWS_MAPPING = {
         "cg": pycoingecko_view,
         "cp": coinpaprika_view,
         "bin": binance_view,
+        "mes": messari_view,
     }
 
     PATH = "/crypto/dd/"
@@ -129,6 +136,9 @@ class DueDiligenceController(CryptoBaseController):
             choices["twitter"]["-s"] = {
                 c: None for c in coinpaprika_view.TWEETS_FILTERS
             }
+            choices["mcapdom"]["-i"] = {
+                c: None for c in messari_model.INTERVALS_TIMESERIES
+            }
             choices["ps"]["--vs"] = {c: None for c in coinpaprika_view.CURRENCIES}
             self.completer = NestedCompleter.from_nested_dict(choices)
 
@@ -171,7 +181,9 @@ class DueDiligenceController(CryptoBaseController):
 [src]Coinbase[/src]
    cbbook          show order book
    trades          show last trades
-   stats           show coin stats[/cmds]
+   stats           show coin stats
+[src]Messari[/src]
+   mcapdom         show market cap dominance[/cmds]
 """
         console.print(text=help_text, menu="Stocks - Due Diligence")
 
@@ -181,6 +193,7 @@ class DueDiligenceController(CryptoBaseController):
             return ["crypto", f"load {self.coin} --source {self.source}"]
         return []
 
+    @log_start_end(log=logger)
     def call_nonzero(self, other_args: List[str]):
         """Process nonzero command"""
 
@@ -240,6 +253,7 @@ class DueDiligenceController(CryptoBaseController):
         else:
             console.print("Glassnode source does not support this symbol\n")
 
+    @log_start_end(log=logger)
     def call_active(self, other_args: List[str]):
         """Process active command"""
 
@@ -298,6 +312,7 @@ class DueDiligenceController(CryptoBaseController):
         else:
             console.print("Glassnode source does not support this symbol\n")
 
+    @log_start_end(log=logger)
     def call_change(self, other_args: List[str]):
         """Process change command"""
 
@@ -370,6 +385,7 @@ class DueDiligenceController(CryptoBaseController):
         else:
             console.print("Glassnode source does not support this symbol\n")
 
+    @log_start_end(log=logger)
     def call_eb(self, other_args: List[str]):
         """Process eb command"""
 
@@ -451,6 +467,7 @@ class DueDiligenceController(CryptoBaseController):
         else:
             console.print("Glassnode source does not support this symbol\n")
 
+    @log_start_end(log=logger)
     def call_oi(self, other_args):
         """Process oi command"""
         assert isinstance(self.symbol, str)
@@ -485,6 +502,7 @@ class DueDiligenceController(CryptoBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_info(self, other_args):
         """Process info command"""
         parser = argparse.ArgumentParser(
@@ -506,6 +524,7 @@ class DueDiligenceController(CryptoBaseController):
                 symbol=self.coin_map_df["CoinGecko"], export=ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_market(self, other_args):
         """Process market command"""
         parser = argparse.ArgumentParser(
@@ -524,6 +543,7 @@ class DueDiligenceController(CryptoBaseController):
                 self.coin_map_df["CoinGecko"], ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_web(self, other_args):
         """Process web command"""
         parser = argparse.ArgumentParser(
@@ -543,6 +563,7 @@ class DueDiligenceController(CryptoBaseController):
                 self.coin_map_df["CoinGecko"], export=ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_social(self, other_args):
         """Process social command"""
         parser = argparse.ArgumentParser(
@@ -561,6 +582,7 @@ class DueDiligenceController(CryptoBaseController):
                 self.coin_map_df["CoinGecko"], export=ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_dev(self, other_args):
         """Process dev command"""
         parser = argparse.ArgumentParser(
@@ -582,6 +604,7 @@ class DueDiligenceController(CryptoBaseController):
                 self.coin_map_df["CoinGecko"], ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_ath(self, other_args):
         """Process ath command"""
         parser = argparse.ArgumentParser(
@@ -608,6 +631,7 @@ class DueDiligenceController(CryptoBaseController):
                 self.coin_map_df["CoinGecko"], ns_parser.vs, ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_atl(self, other_args):
         """Process atl command"""
         parser = argparse.ArgumentParser(
@@ -633,6 +657,7 @@ class DueDiligenceController(CryptoBaseController):
                 self.coin_map_df["CoinGecko"], ns_parser.vs, ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_score(self, other_args):
         """Process score command"""
         parser = argparse.ArgumentParser(
@@ -655,6 +680,7 @@ class DueDiligenceController(CryptoBaseController):
                 self.coin_map_df["CoinGecko"], ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_bc(self, other_args):
         """Process bc command"""
         parser = argparse.ArgumentParser(
@@ -673,6 +699,7 @@ class DueDiligenceController(CryptoBaseController):
         if ns_parser:
             pycoingecko_view.display_bc(self.coin_map_df["CoinGecko"], ns_parser.export)
 
+    @log_start_end(log=logger)
     def call_binbook(self, other_args):
         """Process book command"""
         parser = argparse.ArgumentParser(
@@ -715,6 +742,7 @@ class DueDiligenceController(CryptoBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_cbbook(self, other_args):
         """Process cbbook command"""
         coin = self.coin_map_df["Coinbase"]
@@ -748,6 +776,7 @@ class DueDiligenceController(CryptoBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_balance(self, other_args):
         """Process balance command"""
         coin = self.coin_map_df["Binance"]
@@ -778,6 +807,7 @@ class DueDiligenceController(CryptoBaseController):
                 coin=coin, currency=ns_parser.vs, export=ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_trades(self, other_args):
         """Process trades command"""
         parser = argparse.ArgumentParser(
@@ -835,6 +865,7 @@ class DueDiligenceController(CryptoBaseController):
                 product_id=pair, limit=ns_parser.top, side=side, export=ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_stats(self, other_args):
         """Process stats command"""
         coin = self.coin_map_df["Binance"]
@@ -864,6 +895,7 @@ class DueDiligenceController(CryptoBaseController):
             pair = f"{coin}-{ns_parser.vs.upper()}"
             coinbase_view.display_stats(pair, ns_parser.export)
 
+    @log_start_end(log=logger)
     def call_ps(self, other_args):
         """Process ps command"""
         parser = argparse.ArgumentParser(
@@ -891,6 +923,7 @@ class DueDiligenceController(CryptoBaseController):
                 ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_basic(self, other_args):
         """Process basic command"""
         parser = argparse.ArgumentParser(
@@ -910,6 +943,7 @@ class DueDiligenceController(CryptoBaseController):
                 ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_mkt(self, other_args):
         """Process mkt command"""
         parser = argparse.ArgumentParser(
@@ -984,6 +1018,7 @@ class DueDiligenceController(CryptoBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_ex(self, other_args):
         """Process ex command"""
         parser = argparse.ArgumentParser(
@@ -1037,6 +1072,7 @@ class DueDiligenceController(CryptoBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_events(self, other_args):
         """Process events command"""
         parser = argparse.ArgumentParser(
@@ -1102,6 +1138,7 @@ class DueDiligenceController(CryptoBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_twitter(self, other_args):
         """Process twitter command"""
         parser = argparse.ArgumentParser(
@@ -1153,5 +1190,60 @@ class DueDiligenceController(CryptoBaseController):
                 top=ns_parser.limit,
                 sortby=ns_parser.sortby,
                 descend=ns_parser.descend,
+                export=ns_parser.export,
+            )
+
+    @log_start_end(log=logger)
+    def call_mcapdom(self, other_args: List[str]):
+        """Process mcapdom command"""
+
+        parser = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            prog="mcapdom",
+            description="""
+                Display asset's percentage share of total crypto circulating market cap
+                [Source: https://messari.io]
+            """,
+        )
+
+        parser.add_argument(
+            "-i",
+            "--interval",
+            dest="interval",
+            type=str,
+            help="Frequency interval. Default: 1d",
+            default="1d",
+            choices=messari_model.INTERVALS_TIMESERIES,
+        )
+
+        parser.add_argument(
+            "-s",
+            "--start",
+            dest="start",
+            type=valid_date,
+            help="Initial date. Default: A year ago",
+            default=(datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d"),
+        )
+
+        parser.add_argument(
+            "-end",
+            "--end",
+            dest="end",
+            type=valid_date,
+            help="End date. Default: Today",
+            default=datetime.now().strftime("%Y-%m-%d"),
+        )
+
+        ns_parser = parse_known_args_and_warn(
+            parser, other_args, EXPORT_BOTH_RAW_DATA_AND_FIGURES
+        )
+
+        if ns_parser:
+            messari_view.display_marketcap_dominance(
+                coin=self.symbol.upper(),
+                interval=ns_parser.interval,
+                start=ns_parser.start,
+                end=ns_parser.end,
                 export=ns_parser.export,
             )

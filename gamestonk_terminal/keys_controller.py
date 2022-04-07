@@ -1,13 +1,12 @@
 """Keys Controller Module"""
 __docformat__ = "numpy"
 
-import os
 import argparse
 import logging
-from typing import List, Dict
-from pathlib import Path
-import dotenv
+import os
+from typing import Dict, List
 
+import dotenv
 import praw
 import pyEX
 import quandl
@@ -15,19 +14,20 @@ import requests
 from alpha_vantage.timeseries import TimeSeries
 from coinmarketcapapi import CoinMarketCapAPI, CoinMarketCapAPIError
 from prawcore.exceptions import ResponseException
+from prompt_toolkit.completion import NestedCompleter
 from pyEX.common.exception import PyEXception
 
-from prompt_toolkit.completion import NestedCompleter
-from gamestonk_terminal.rich_config import console
+from gamestonk_terminal import config_terminal as cfg
 from gamestonk_terminal import feature_flags as gtff
-from gamestonk_terminal.parent_classes import BaseController
-from gamestonk_terminal.menu import session
-from gamestonk_terminal.helper_funcs import parse_known_args_and_warn
 from gamestonk_terminal.cryptocurrency.coinbase_helpers import (
     CoinbaseProAuth,
     make_coinbase_request,
 )
-from gamestonk_terminal import config_terminal as cfg
+from gamestonk_terminal.decorators import log_start_end
+from gamestonk_terminal.helper_funcs import parse_known_args_and_warn
+from gamestonk_terminal.menu import session
+from gamestonk_terminal.parent_classes import BaseController
+from gamestonk_terminal.rich_config import console
 
 # pylint: disable=too-many-lines,no-member,too-many-public-methods,C0302
 
@@ -47,7 +47,7 @@ class KeysController(BaseController):
         "news",
         "tradier",
         "cmc",
-        "finhub",
+        "finnhub",
         "iex",
         "reddit",
         "twitter",
@@ -68,36 +68,35 @@ class KeysController(BaseController):
     PATH = "/keys/"
     key_dict: Dict = {}
     cfg_dict: Dict = {}
-    env_file = ".env"
-    env_files = [f for f in os.listdir() if f.endswith(".env")]
-    if env_files:
-        env_file = env_files[0]
-        dotenv.load_dotenv(env_file)
-    else:
-        # create env file
-        Path(".env")
 
-    def __init__(self, queue: List[str] = None):
+    def __init__(
+        self, queue: List[str] = None, menu_usage: bool = True, env_file: str = ".env"
+    ):
         """Constructor"""
         super().__init__(queue)
-        self.check_keys_status()
+        self.env_file = env_file
+        if menu_usage:
+            self.check_keys_status()
 
-        if session and gtff.USE_PROMPT_TOOLKIT:
-            choices: dict = {c: {} for c in self.controller_choices}
-            self.completer = NestedCompleter.from_nested_dict(choices)
+            if session and gtff.USE_PROMPT_TOOLKIT:
+                choices: dict = {c: {} for c in self.controller_choices}
+                self.completer = NestedCompleter.from_nested_dict(choices)
 
     def check_av_key(self, show_output: bool = False) -> None:
         """Check Alpha Vantage key"""
         self.cfg_dict["ALPHA_VANTAGE"] = "av"
         if cfg.API_KEY_ALPHAVANTAGE == "REPLACE_ME":  # pragma: allowlist secret
+            logger.info("Alpha Vantage key not defined")
             self.key_dict["ALPHA_VANTAGE"] = "not defined"
         else:
             df = TimeSeries(
                 key=cfg.API_KEY_ALPHAVANTAGE, output_format="pandas"
             ).get_intraday(symbol="AAPL")
             if df[0].empty:
+                logger.warning("Alpha Vantage key defined, test failed")
                 self.key_dict["ALPHA_VANTAGE"] = "defined, test failed"
             else:
+                logger.info("Alpha Vantage key defined, test passed")
                 self.key_dict["ALPHA_VANTAGE"] = "defined, test passed"
 
         if show_output:
@@ -110,16 +109,20 @@ class KeysController(BaseController):
             cfg.API_KEY_FINANCIALMODELINGPREP
             == "REPLACE_ME"  # pragma: allowlist secret
         ):  # pragma: allowlist secret
+            logger.info("Financial Modeling Prep key not defined")
             self.key_dict["FINANCIAL_MODELING_PREP"] = "not defined"
         else:
             r = requests.get(
                 f"https://financialmodelingprep.com/api/v3/profile/AAPL?apikey={cfg.API_KEY_FINANCIALMODELINGPREP}"
             )
             if r.status_code in [403, 401]:
+                logger.warning("Financial Modeling Prep key defined, test failed")
                 self.key_dict["FINANCIAL_MODELING_PREP"] = "defined, test failed"
             elif r.status_code == 200:
+                logger.info("Financial Modeling Prep key defined, test passed")
                 self.key_dict["FINANCIAL_MODELING_PREP"] = "defined, test passed"
             else:
+                logger.warning("Financial Modeling Prep key defined, test inconclusive")
                 self.key_dict["FINANCIAL_MODELING_PREP"] = "defined, test inconclusive"
 
         if show_output:
@@ -129,6 +132,7 @@ class KeysController(BaseController):
         """Check Quandl key"""
         self.cfg_dict["QUANDL"] = "quandl"
         if cfg.API_KEY_QUANDL == "REPLACE_ME":  # pragma: allowlist secret
+            logger.info("Quandl key not defined")
             self.key_dict["QUANDL"] = "not defined"
         else:
             try:
@@ -140,8 +144,10 @@ class KeysController(BaseController):
                     per_end_date={"gte": "2015-01-01"},
                     qopts={"columns": ["ticker", "per_end_date"]},
                 )
+                logger.info("Quandl key defined, test passed")
                 self.key_dict["QUANDL"] = "defined, test passed"
             except Exception as _:  # noqa: F841
+                logger.exception("Quandl key defined, test failed")
                 self.key_dict["QUANDL"] = "defined, test failed"
 
         if show_output:
@@ -151,6 +157,7 @@ class KeysController(BaseController):
         """Check Polygon key"""
         self.cfg_dict["POLYGON"] = "polygon"
         if cfg.API_POLYGON_KEY == "REPLACE_ME":
+            logger.info("Polygon key not defined")
             self.key_dict["POLYGON"] = "not defined"
         else:
             r = requests.get(
@@ -158,10 +165,13 @@ class KeysController(BaseController):
                 f"?apiKey={cfg.API_POLYGON_KEY}"
             )
             if r.status_code in [403, 401]:
+                logger.warning("Polygon key defined, test failed")
                 self.key_dict["POLYGON"] = "defined, test failed"
             elif r.status_code == 200:
+                logger.info("Polygon key defined, test passed")
                 self.key_dict["POLYGON"] = "defined, test passed"
             else:
+                logger.warning("Polygon key defined, test inconclusive")
                 self.key_dict["POLYGON"] = "defined, test inconclusive"
 
         if show_output:
@@ -171,16 +181,20 @@ class KeysController(BaseController):
         """Check FRED key"""
         self.cfg_dict["FRED"] = "fred"
         if cfg.API_FRED_KEY == "REPLACE_ME":
+            logger.info("FRED key not defined")
             self.key_dict["FRED"] = "not defined"
         else:
             r = requests.get(
                 f"https://api.stlouisfed.org/fred/series?series_id=GNPCA&api_key={cfg.API_FRED_KEY}"
             )
             if r.status_code in [403, 401, 400]:
+                logger.warning("FRED key defined, test failed")
                 self.key_dict["FRED"] = "defined, test failed"
             elif r.status_code == 200:
+                logger.info("FRED key defined, test passed")
                 self.key_dict["FRED"] = "defined, test passed"
             else:
+                logger.warning("FRED key defined, test inconclusive")
                 self.key_dict["FRED"] = "defined, test inconclusive"
 
         if show_output:
@@ -190,16 +204,20 @@ class KeysController(BaseController):
         """Check News API key"""
         self.cfg_dict["NEWSAPI"] = "news"
         if cfg.API_NEWS_TOKEN == "REPLACE_ME":
+            logger.info("News API key not defined")
             self.key_dict["NEWSAPI"] = "not defined"
         else:
             r = requests.get(
                 f"https://newsapi.org/v2/everything?q=keyword&apiKey={cfg.API_NEWS_TOKEN}"
             )
             if r.status_code in [401, 403]:
+                logger.warning("News API key defined, test failed")
                 self.key_dict["NEWSAPI"] = "defined, test failed"
             elif r.status_code == 200:
+                logger.info("News API key defined, test passed")
                 self.key_dict["NEWSAPI"] = "defined, test passed"
             else:
+                logger.warning("News API key defined, test inconclusive")
                 self.key_dict["NEWSAPI"] = "defined, test inconclusive"
 
         if show_output:
@@ -209,6 +227,7 @@ class KeysController(BaseController):
         """Check Tradier key"""
         self.cfg_dict["TRADIER"] = "tradier"
         if cfg.TRADIER_TOKEN == "REPLACE_ME":
+            logger.info("Tradier key not defined")
             self.key_dict["TRADIER"] = "not defined"
         else:
             r = requests.get(
@@ -220,10 +239,13 @@ class KeysController(BaseController):
                 },
             )
             if r.status_code in [401, 403]:
+                logger.warning("Tradier key not defined, test failed")
                 self.key_dict["TRADIER"] = "defined, test failed"
             elif r.status_code == 200:
+                logger.info("Tradier key not defined, test passed")
                 self.key_dict["TRADIER"] = "defined, test passed"
             else:
+                logger.warning("Tradier key not defined, test inconclusive")
                 self.key_dict["TRADIER"] = "defined, test inconclusive"
 
         if show_output:
@@ -233,32 +255,40 @@ class KeysController(BaseController):
         """Check Coinmarketcap key"""
         self.cfg_dict["COINMARKETCAP"] = "cmc"
         if cfg.API_CMC_KEY == "REPLACE_ME":
+            logger.info("Coinmarketcap key not defined")
             self.key_dict["COINMARKETCAP"] = "not defined"
         else:
             cmc = CoinMarketCapAPI(cfg.API_CMC_KEY)
+
             try:
-                cmc.exchange_info()
+                cmc.cryptocurrency_map()
+                logger.info("Coinmarketcap key defined, test passed")
                 self.key_dict["COINMARKETCAP"] = "defined, test passed"
             except CoinMarketCapAPIError:
+                logger.exception("Coinmarketcap key defined, test failed")
                 self.key_dict["COINMARKETCAP"] = "defined, test failed"
 
         if show_output:
             console.print(self.key_dict["COINMARKETCAP"] + "\n")
 
-    def check_finhub_key(self, show_output: bool = False) -> None:
-        """Check Finhub key"""
-        self.cfg_dict["FINNHUB"] = "finhub"
+    def check_finnhub_key(self, show_output: bool = False) -> None:
+        """Check Finnhub key"""
+        self.cfg_dict["FINNHUB"] = "finnhub"
         if cfg.API_FINNHUB_KEY == "REPLACE_ME":
+            logger.info("Finnhub key not defined")
             self.key_dict["FINNHUB"] = "not defined"
         else:
             r = r = requests.get(
                 f"https://finnhub.io/api/v1/quote?symbol=AAPL&token={cfg.API_FINNHUB_KEY}"
             )
             if r.status_code in [403, 401, 400]:
+                logger.warning("Finnhub key defined, test failed")
                 self.key_dict["FINNHUB"] = "defined, test failed"
             elif r.status_code == 200:
+                logger.info("Finnhub key defined, test passed")
                 self.key_dict["FINNHUB"] = "defined, test passed"
             else:
+                logger.warning("Finnhub key defined, test inconclusive")
                 self.key_dict["FINNHUB"] = "defined, test inconclusive"
 
         if show_output:
@@ -268,12 +298,15 @@ class KeysController(BaseController):
         """Check IEX Cloud key"""
         self.cfg_dict["IEXCLOUD"] = "iex"
         if cfg.API_IEX_TOKEN == "REPLACE_ME":
+            logger.info("IEX Cloud key not defined")
             self.key_dict["IEXCLOUD"] = "not defined"
         else:
             try:
                 pyEX.Client(api_token=cfg.API_IEX_TOKEN, version="v1")
+                logger.info("IEX Cloud key defined, test passed")
                 self.key_dict["IEXCLOUD"] = "defined, test passed"
             except PyEXception:
+                logger.exception("IEX Cloud key defined, test failed")
                 self.key_dict["IEXCLOUD"] = "defined, test failed"
 
         if show_output:
@@ -290,20 +323,24 @@ class KeysController(BaseController):
             cfg.API_REDDIT_USER_AGENT,
         ]
         if "REPLACE_ME" in reddit_keys:
+            logger.info("Reddit key not defined")
             self.key_dict["REDDIT"] = "not defined"
         else:
-            praw_api = praw.Reddit(
-                client_id=cfg.API_REDDIT_CLIENT_ID,
-                client_secret=cfg.API_REDDIT_CLIENT_SECRET,
-                username=cfg.API_REDDIT_USERNAME,
-                user_agent=cfg.API_REDDIT_USER_AGENT,
-                password=cfg.API_REDDIT_PASSWORD,
-            )
 
             try:
+                praw_api = praw.Reddit(
+                    client_id=cfg.API_REDDIT_CLIENT_ID,
+                    client_secret=cfg.API_REDDIT_CLIENT_SECRET,
+                    username=cfg.API_REDDIT_USERNAME,
+                    user_agent=cfg.API_REDDIT_USER_AGENT,
+                    password=cfg.API_REDDIT_PASSWORD,
+                )
+
                 praw_api.user.me()
+                logger.info("Reddit key defined, test passed")
                 self.key_dict["REDDIT"] = "defined, test passed"
-            except ResponseException:
+            except (Exception, ResponseException):
+                logger.warning("Reddit key defined, test passed")
                 self.key_dict["REDDIT"] = "defined, test failed"
 
         if show_output:
@@ -318,6 +355,7 @@ class KeysController(BaseController):
             cfg.API_TWITTER_BEARER_TOKEN,
         ]
         if "REPLACE_ME" in twitter_keys:
+            logger.info("Twitter key not defined")
             self.key_dict["TWITTER"] = "not defined"
         else:
             params = {
@@ -331,10 +369,13 @@ class KeysController(BaseController):
                 headers={"authorization": "Bearer " + cfg.API_TWITTER_BEARER_TOKEN},
             )
             if r.status_code == 200:
+                logger.info("Twitter key defined, test passed")
                 self.key_dict["TWITTER"] = "defined, test passed"
             elif r.status_code in [401, 403]:
+                logger.warning("Twitter key defined, test failed")
                 self.key_dict["TWITTER"] = "defined, test failed"
             else:
+                logger.warning("Twitter key defined, test failed")
                 self.key_dict["TWITTER"] = "defined, test inconclusive"
 
         if show_output:
@@ -345,8 +386,10 @@ class KeysController(BaseController):
         self.cfg_dict["ROBINHOOD"] = "rh"
         rh_keys = [cfg.RH_USERNAME, cfg.RH_PASSWORD]
         if "REPLACE_ME" in rh_keys:
+            logger.info("Robinhood key not defined")
             self.key_dict["ROBINHOOD"] = "not defined"
         else:
+            logger.info("Robinhood key defined, not tested")
             self.key_dict["ROBINHOOD"] = "defined, not tested"
 
         if show_output:
@@ -357,8 +400,10 @@ class KeysController(BaseController):
         self.cfg_dict["DEGIRO"] = "degiro"
         dg_keys = [cfg.DG_USERNAME, cfg.DG_PASSWORD, cfg.DG_TOTP_SECRET]
         if "REPLACE_ME" in dg_keys:
+            logger.info("Degiro key not defined")
             self.key_dict["DEGIRO"] = "not defined"
         else:
+            logger.info("Degiro key defined, not tested")
             self.key_dict["DEGIRO"] = "defined, not tested"
 
         if show_output:
@@ -369,8 +414,10 @@ class KeysController(BaseController):
         self.cfg_dict["OANDA"] = "oanda"
         oanda_keys = [cfg.OANDA_TOKEN, cfg.OANDA_ACCOUNT]
         if "REPLACE_ME" in oanda_keys:
+            logger.info("Oanda key not defined")
             self.key_dict["OANDA"] = "not defined"
         else:
+            logger.info("Oanda key defined, not tested")
             self.key_dict["OANDA"] = "defined, not tested"
 
         if show_output:
@@ -381,8 +428,10 @@ class KeysController(BaseController):
         self.cfg_dict["BINANCE"] = "binance"
         bn_keys = [cfg.API_BINANCE_KEY, cfg.API_BINANCE_SECRET]
         if "REPLACE_ME" in bn_keys:
+            logger.info("Binance key not defined")
             self.key_dict["BINANCE"] = "not defined"
         else:
+            logger.info("Binance key defined, not tested")
             self.key_dict["BINANCE"] = "defined, not tested"
 
         if show_output:
@@ -393,6 +442,7 @@ class KeysController(BaseController):
         self.cfg_dict["BITQUERY"] = "bitquery"
         bitquery = cfg.API_BITQUERY_KEY
         if "REPLACE_ME" in bitquery:
+            logger.info("Bitquery key not defined")
             self.key_dict["BITQUERY"] = "not defined"
         else:
             headers = {"x-api-key": cfg.API_BITQUERY_KEY}
@@ -408,8 +458,10 @@ class KeysController(BaseController):
                 "https://graphql.bitquery.io", json={"query": query}, headers=headers
             )
             if r.status_code == 200:
+                logger.info("Bitquery key defined, test passed")
                 self.key_dict["BITQUERY"] = "defined, test passed"
             else:
+                logger.warning("Bitquery key defined, test failed")
                 self.key_dict["BITQUERY"] = "defined, test failed"
 
         if show_output:
@@ -420,15 +472,22 @@ class KeysController(BaseController):
         self.cfg_dict["SENTIMENT_INVESTOR"] = "si"
         si_keys = [cfg.API_SENTIMENTINVESTOR_TOKEN]
         if "REPLACE_ME" in si_keys:
+            logger.info("Sentiment Investor key not defined")
             self.key_dict["SENTIMENT_INVESTOR"] = "not defined"
         else:
-            account = requests.get(
-                f"https://api.sentimentinvestor.com/v1/trending"
-                f"?token={cfg.API_SENTIMENTINVESTOR_TOKEN}"
-            )
-            if account.ok and account.json().get("success", False):
-                self.key_dict["SENTIMENT_INVESTOR"] = "defined, test passed"
-            else:
+            try:
+                account = requests.get(
+                    f"https://api.sentimentinvestor.com/v1/trending"
+                    f"?token={cfg.API_SENTIMENTINVESTOR_TOKEN}"
+                )
+                if account.ok and account.json().get("success", False):
+                    logger.info("Sentiment Investor key defined, test passed")
+                    self.key_dict["SENTIMENT_INVESTOR"] = "defined, test passed"
+                else:
+                    logger.warning("Sentiment Investor key defined, test failed")
+                    self.key_dict["SENTIMENT_INVESTOR"] = "defined, test unsuccessful"
+            except Exception:
+                logger.warning("Sentiment Investor key defined, test failed")
                 self.key_dict["SENTIMENT_INVESTOR"] = "defined, test unsuccessful"
 
         if show_output:
@@ -442,6 +501,7 @@ class KeysController(BaseController):
             cfg.API_COINBASE_SECRET,
             cfg.API_COINBASE_PASS_PHRASE,
         ]:
+            logger.info("Coinbase key not defined")
             self.key_dict["COINBASE"] = "not defined"
         else:
             auth = CoinbaseProAuth(
@@ -451,8 +511,10 @@ class KeysController(BaseController):
             )
             resp = make_coinbase_request("/accounts", auth=auth)
             if not resp:
+                logger.warning("Coinbase key defined, test failed")
                 self.key_dict["COINBASE"] = "defined, test unsuccessful"
             else:
+                logger.info("Coinbase key defined, test passed")
                 self.key_dict["COINBASE"] = "defined, test passed"
 
         if show_output:
@@ -462,6 +524,7 @@ class KeysController(BaseController):
         """Check Walert key"""
         self.cfg_dict["WHALE_ALERT"] = "wa"
         if "REPLACE_ME" == cfg.API_WHALE_ALERT_KEY:
+            logger.info("Walert key not defined")
             self.key_dict["WHALE_ALERT"] = "not defined"
         else:
             url = (
@@ -471,10 +534,13 @@ class KeysController(BaseController):
             response = requests.get(url)
 
             if not 200 <= response.status_code < 300:
+                logger.warning("Walert key defined, test failed")
                 self.key_dict["WHALE_ALERT"] = "defined, test unsuccessful"
             try:
+                logger.info("Walert key defined, test passed")
                 self.key_dict["WHALE_ALERT"] = "defined, test passed"
             except Exception:
+                logger.exception("Walert key defined, test failed")
                 self.key_dict["WHALE_ALERT"] = "defined, test unsuccessful"
 
         if show_output:
@@ -484,6 +550,7 @@ class KeysController(BaseController):
         """Check glassnode key"""
         self.cfg_dict["GLASSNODE"] = "glassnode"
         if "REPLACE_ME" == cfg.API_GLASSNODE_KEY:
+            logger.info("Glassnode key not defined")
             self.key_dict["GLASSNODE"] = "not defined"
         else:
             url = "https://api.glassnode.com/v1/metrics/market/price_usd_close"
@@ -498,8 +565,10 @@ class KeysController(BaseController):
 
             r = requests.get(url, params=parameters)
             if r.status_code == 200:
+                logger.info("Glassnode key defined, test passed")
                 self.key_dict["GLASSNODE"] = "defined, test passed"
             else:
+                logger.warning("Glassnode key defined, test failed")
                 self.key_dict["GLASSNODE"] = "defined, test unsuccessful"
 
         if show_output:
@@ -509,6 +578,7 @@ class KeysController(BaseController):
         """Check coinglass key"""
         self.cfg_dict["COINGLASS"] = "coinglass"
         if "REPLACE_ME" == cfg.API_COINGLASS_KEY:
+            logger.info("Coinglass key not defined")
             self.key_dict["COINGLASS"] = "not defined"
         else:
             url = "https://open-api.coinglass.com/api/pro/v1/futures/openInterest/chart?&symbol=BTC&interval=0"
@@ -518,8 +588,10 @@ class KeysController(BaseController):
             response = requests.request("GET", url, headers=headers)
 
             if response.status_code == 200:
+                logger.info("Coinglass key defined, test passed")
                 self.key_dict["COINGLASS"] = "defined, test passed"
             else:
+                logger.warning("Coinglass key defined, test failed")
                 self.key_dict["COINGLASS"] = "defined, test unsuccessful"
 
         if show_output:
@@ -529,16 +601,20 @@ class KeysController(BaseController):
         """Check cpanic key"""
         self.cfg_dict["CRYPTO_PANIC"] = "cpanic"
         if "REPLACE_ME" == cfg.API_CRYPTO_PANIC_KEY:
+            logger.info("cpanic key not defined")
             self.key_dict["CRYPTO_PANIC"] = "not defined"
         else:
             crypto_panic_url = f"https://cryptopanic.com/api/v1/posts/?auth_token={cfg.API_CRYPTO_PANIC_KEY}&kind=all"
             response = requests.get(crypto_panic_url)
 
             if not 200 <= response.status_code < 300:
+                logger.warning("cpanic key defined, test failed")
                 self.key_dict["CRYPTO_PANIC"] = "defined, test unsuccessful"
             try:
+                logger.info("cpanic key defined, test passed")
                 self.key_dict["CRYPTO_PANIC"] = "defined, test passed"
             except Exception as _:  # noqa: F841
+                logger.warning("cpanic key defined, test failed")
                 self.key_dict["CRYPTO_PANIC"] = "defined, test unsuccessful"
 
         if show_output:
@@ -548,6 +624,7 @@ class KeysController(BaseController):
         """Check ethplorer key"""
         self.cfg_dict["ETHPLORER"] = "ethplorer"
         if "REPLACE_ME" == cfg.API_ETHPLORER_KEY:
+            logger.info("ethplorer key not defined")
             self.key_dict["ETHPLORER"] = "not defined"
         else:
             ethplorer_url = "https://api.ethplorer.io/getTokenInfo/0x1f9840a85d5af5bf1d1762f925bdaddc4201f984?apiKey="
@@ -555,10 +632,13 @@ class KeysController(BaseController):
             response = requests.get(ethplorer_url)
             try:
                 if response.status_code == 200:
+                    logger.info("ethplorer key defined, test passed")
                     self.key_dict["ETHPLORER"] = "defined, test passed"
                 else:
+                    logger.warning("ethplorer key defined, test failed")
                     self.key_dict["ETHPLORER"] = "defined, test unsuccessful"
             except Exception as _:  # noqa: F841
+                logger.exception("ethplorer key defined, test failed")
                 self.key_dict["ETHPLORER"] = "defined, test unsuccessful"
 
         if show_output:
@@ -604,7 +684,7 @@ class KeysController(BaseController):
         self.check_news_key()
         self.check_tradier_key()
         self.check_cmc_key()
-        self.check_finhub_key()
+        self.check_finnhub_key()
         self.check_iex_key()
         self.check_reddit_key()
         self.check_twitter_key()
@@ -640,6 +720,7 @@ class KeysController(BaseController):
 
         console.print(text=help_text, menu="Keys")
 
+    @log_start_end(log=logger)
     def call_av(self, other_args: List[str]):
         """Process av command"""
         parser = argparse.ArgumentParser(
@@ -655,6 +736,12 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print(
+                "For your API Key, visit: https://www.alphavantage.co/support/#api-key\n"
+            )
+            return
+
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -664,6 +751,7 @@ class KeysController(BaseController):
             cfg.API_KEY_ALPHAVANTAGE = ns_parser.key
             self.check_av_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_fmp(self, other_args: List[str]):
         """Process fmp command"""
         parser = argparse.ArgumentParser(
@@ -679,6 +767,12 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print(
+                "For your API Key, visit: https://financialmodelingprep.com\n"
+            )
+            return
+
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -690,6 +784,7 @@ class KeysController(BaseController):
             cfg.API_KEY_FINANCIALMODELINGPREP = ns_parser.key
             self.check_fmp_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_quandl(self, other_args: List[str]):
         """Process quandl command"""
         parser = argparse.ArgumentParser(
@@ -705,6 +800,10 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://www.quandl.com\n")
+            return
+
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -714,6 +813,7 @@ class KeysController(BaseController):
             cfg.API_KEY_QUANDL = ns_parser.key
             self.check_quandl_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_polygon(self, other_args: List[str]):
         """Process polygon command"""
         parser = argparse.ArgumentParser(
@@ -729,6 +829,10 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://polygon.io\n")
+            return
+
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -738,6 +842,7 @@ class KeysController(BaseController):
             cfg.API_POLYGON_KEY = ns_parser.key
             self.check_polygon_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_fred(self, other_args: List[str]):
         """Process FRED command"""
         parser = argparse.ArgumentParser(
@@ -753,6 +858,10 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://fred.stlouisfed.org\n")
+            return
+
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -762,6 +871,7 @@ class KeysController(BaseController):
             cfg.API_FRED_KEY = ns_parser.key
             self.check_fred_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_news(self, other_args: List[str]):
         """Process News API command"""
         parser = argparse.ArgumentParser(
@@ -777,6 +887,10 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://newsapi.org\n")
+            return
+
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -786,6 +900,7 @@ class KeysController(BaseController):
             cfg.API_NEWS_TOKEN = ns_parser.key
             self.check_news_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_tradier(self, other_args: List[str]):
         """Process Tradier API command"""
         parser = argparse.ArgumentParser(
@@ -801,6 +916,10 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://developer.tradier.com\n")
+            return
+
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -810,6 +929,7 @@ class KeysController(BaseController):
             cfg.TRADIER_TOKEN = ns_parser.key
             self.check_tradier_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_cmc(self, other_args: List[str]):
         """Process CoinMarketCap API command"""
         parser = argparse.ArgumentParser(
@@ -825,6 +945,9 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://coinmarketcap.com\n")
+            return
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -834,13 +957,14 @@ class KeysController(BaseController):
             cfg.API_CMC_KEY = ns_parser.key
             self.check_cmc_key(show_output=True)
 
-    def call_finhub(self, other_args: List[str]):
-        """Process Finhub API command"""
+    @log_start_end(log=logger)
+    def call_finnhub(self, other_args: List[str]):
+        """Process Finnhub API command"""
         parser = argparse.ArgumentParser(
             add_help=False,
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            prog="finhub",
-            description="Set Finhub API key.",
+            prog="finnhub",
+            description="Set Finnhub API key.",
         )
         parser.add_argument(
             "-k",
@@ -849,6 +973,9 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://finnhub.io\n")
+            return
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -856,8 +983,9 @@ class KeysController(BaseController):
             os.environ["GT_API_FINNHUB_KEY"] = ns_parser.key
             dotenv.set_key(self.env_file, "GT_API_FINNHUB_KEY", ns_parser.key)
             cfg.API_FINNHUB_KEY = ns_parser.key
-            self.check_finhub_key(show_output=True)
+            self.check_finnhub_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_iex(self, other_args: List[str]):
         """Process iex command"""
         parser = argparse.ArgumentParser(
@@ -873,6 +1001,9 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://iexcloud.io\n")
+            return
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -882,6 +1013,7 @@ class KeysController(BaseController):
             cfg.API_IEX_TOKEN = ns_parser.key
             self.check_iex_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_reddit(self, other_args: List[str]):
         """Process reddit command"""
         parser = argparse.ArgumentParser(
@@ -925,6 +1057,9 @@ class KeysController(BaseController):
             dest="user_agent",
             help="User agent",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://www.reddit.com\n")
+            return
         ns_parser = parse_known_args_and_warn(parser, other_args)
         if ns_parser:
             os.environ["GT_API_REDDIT_CLIENT_ID"] = ns_parser.client_id
@@ -955,6 +1090,7 @@ class KeysController(BaseController):
 
             self.check_reddit_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_twitter(self, other_args: List[str]):
         """Process twitter command"""
         parser = argparse.ArgumentParser(
@@ -984,6 +1120,9 @@ class KeysController(BaseController):
             dest="bearer_token",
             help="Bearer token",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://developer.twitter.com\n")
+            return
         ns_parser = parse_known_args_and_warn(parser, other_args)
         if ns_parser:
             os.environ["GT_API_TWITTER_KEY"] = ns_parser.key
@@ -1004,6 +1143,7 @@ class KeysController(BaseController):
 
             self.check_twitter_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_rh(self, other_args: List[str]):
         """Process rh command"""
         parser = argparse.ArgumentParser(
@@ -1026,6 +1166,9 @@ class KeysController(BaseController):
             dest="password",
             help="password",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://robinhood.com/us/en/\n")
+            return
         ns_parser = parse_known_args_and_warn(parser, other_args)
         if ns_parser:
             os.environ["GT_RH_USERNAME"] = ns_parser.username
@@ -1038,6 +1181,7 @@ class KeysController(BaseController):
 
             self.check_rh_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_degiro(self, other_args: List[str]):
         """Process degiro command"""
         parser = argparse.ArgumentParser(
@@ -1067,6 +1211,9 @@ class KeysController(BaseController):
             dest="secret",
             help="TOPT Secret",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://www.degiro.fr\n")
+            return
         ns_parser = parse_known_args_and_warn(parser, other_args)
         if ns_parser:
             os.environ["GT_DG_USERNAME"] = ns_parser.username
@@ -1083,6 +1230,7 @@ class KeysController(BaseController):
 
             self.check_degiro_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_oanda(self, other_args: List[str]):
         """Process oanda command"""
         parser = argparse.ArgumentParser(
@@ -1112,6 +1260,9 @@ class KeysController(BaseController):
             dest="account_type",
             help="account type",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://developer.oanda.com\n")
+            return
         ns_parser = parse_known_args_and_warn(parser, other_args)
         if ns_parser:
             os.environ["GT_OANDA_ACCOUNT"] = ns_parser.account
@@ -1130,6 +1281,7 @@ class KeysController(BaseController):
 
             self.check_oanda_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_binance(self, other_args: List[str]):
         """Process binance command"""
         parser = argparse.ArgumentParser(
@@ -1152,6 +1304,9 @@ class KeysController(BaseController):
             dest="secret_key",
             help="Secret key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://binance.com\n")
+            return
         ns_parser = parse_known_args_and_warn(parser, other_args)
         if ns_parser:
             os.environ["GT_API_BINANCE_KEY"] = ns_parser.key
@@ -1164,6 +1319,7 @@ class KeysController(BaseController):
 
             self.check_binance_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_bitquery(self, other_args: List[str]):
         """Process bitquery command"""
         parser = argparse.ArgumentParser(
@@ -1179,6 +1335,9 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://bitquery.io/\n")
+            return
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -1189,6 +1348,7 @@ class KeysController(BaseController):
 
             self.check_bitquery_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_si(self, other_args: List[str]):
         """Process si command"""
         parser = argparse.ArgumentParser(
@@ -1204,6 +1364,9 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://sentimentinvestor.com\n")
+            return
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -1216,6 +1379,7 @@ class KeysController(BaseController):
 
             self.check_si_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_coinbase(self, other_args: List[str]):
         """Process coinbase command"""
         parser = argparse.ArgumentParser(
@@ -1245,6 +1409,9 @@ class KeysController(BaseController):
             dest="passphrase",
             help="Passphrase",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://docs.pro.coinbase.com/\n")
+            return
         ns_parser = parse_known_args_and_warn(parser, other_args)
         if ns_parser:
             os.environ["GT_API_COINBASE_KEY"] = ns_parser.key
@@ -1265,6 +1432,7 @@ class KeysController(BaseController):
 
             self.check_coinbase_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_walert(self, other_args: List[str]):
         """Process walert command"""
         parser = argparse.ArgumentParser(
@@ -1280,6 +1448,9 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print("For your API Key, visit: https://docs.whale-alert.io/\n")
+            return
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -1290,6 +1461,7 @@ class KeysController(BaseController):
 
             self.check_walert_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_glassnode(self, other_args: List[str]):
         """Process glassnode command"""
         parser = argparse.ArgumentParser(
@@ -1305,6 +1477,11 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print(
+                "For your API Key, visit: https://docs.glassnode.com/basic-api/api-key#how-to-get-an-api-key/\n"
+            )
+            return
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -1315,6 +1492,7 @@ class KeysController(BaseController):
 
             self.check_glassnode_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_coinglass(self, other_args: List[str]):
         """Process coinglass command"""
         parser = argparse.ArgumentParser(
@@ -1330,6 +1508,11 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print(
+                "For your API Key, visit: https://coinglass.github.io/API-Reference/#api-key\n"
+            )
+            return
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -1340,6 +1523,7 @@ class KeysController(BaseController):
 
             self.check_coinglass_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_cpanic(self, other_args: List[str]):
         """Process cpanic command"""
         parser = argparse.ArgumentParser(
@@ -1355,6 +1539,11 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print(
+                "For your API Key, visit: https://cryptopanic.com/developers/api/\n"
+            )
+            return
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -1365,6 +1554,7 @@ class KeysController(BaseController):
 
             self.check_cpanic_key(show_output=True)
 
+    @log_start_end(log=logger)
     def call_ethplorer(self, other_args: List[str]):
         """Process ethplorer command"""
         parser = argparse.ArgumentParser(
@@ -1380,6 +1570,11 @@ class KeysController(BaseController):
             dest="key",
             help="key",
         )
+        if not other_args:
+            console.print(
+                "For your API Key, visit: https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API\n"
+            )
+            return
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-k")
         ns_parser = parse_known_args_and_warn(parser, other_args)
@@ -1412,7 +1607,9 @@ class KeysController(BaseController):
             dest="token",
             help="Token",
         )
-
+        if not other_args:
+            console.print("For your API Key, visit: https://www.smartstake.io\n")
+            return
         ns_parser = parse_known_args_and_warn(parser, other_args)
 
         if ns_parser:
@@ -1425,11 +1622,3 @@ class KeysController(BaseController):
             cfg.API_SMARTSTAKE_KEY = ns_parser.key
 
             self.check_smartstake_key(show_output=True)
-
-        ns_parser = parse_known_args_and_warn(parser, other_args)
-        if ns_parser:
-            os.environ["GT_API_ETHPLORER_KEY"] = ns_parser.key
-            dotenv.set_key(self.env_file, "GT_API_ETHPLORER_KEY", ns_parser.key)
-            cfg.API_ETHPLORER_KEY = ns_parser.key
-
-            self.check_ethplorer_key(show_output=True)

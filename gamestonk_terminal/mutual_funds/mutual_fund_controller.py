@@ -2,28 +2,37 @@
 __docformat__ = "numpy"
 
 import argparse
+import logging
+import os
 from datetime import datetime, timedelta
 from typing import List
-import os
 
 import investpy
 import pandas as pd
 from prompt_toolkit.completion import NestedCompleter
-from gamestonk_terminal.rich_config import console
 
-from gamestonk_terminal.parent_classes import BaseController
 from gamestonk_terminal import feature_flags as gtff
+from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import (
+    EXPORT_BOTH_RAW_DATA_AND_FIGURES,
     EXPORT_ONLY_FIGURES_ALLOWED,
     EXPORT_ONLY_RAW_DATA_ALLOWED,
-    EXPORT_BOTH_RAW_DATA_AND_FIGURES,
     check_non_negative_float,
     check_positive,
     parse_known_args_and_warn,
     valid_date,
 )
 from gamestonk_terminal.menu import session
-from gamestonk_terminal.mutual_funds import investpy_model, investpy_view, yfinance_view
+from gamestonk_terminal.mutual_funds import (
+    investpy_model,
+    investpy_view,
+    yfinance_view,
+    avanza_view,
+)
+from gamestonk_terminal.parent_classes import BaseController
+from gamestonk_terminal.rich_config import console
+
+logger = logging.getLogger(__name__)
 
 
 class FundController(BaseController):
@@ -39,6 +48,8 @@ class FundController(BaseController):
         "plot",
         "sector",
         "equity",
+        "al_swe",
+        "info_swe",
     ]
 
     fund_countries = investpy.funds.get_fund_countries()
@@ -53,6 +64,7 @@ class FundController(BaseController):
         "currency",
         "underlying",
     ]
+    focus_choices = ["all", "country", "sector", "holding"]
     PATH = "/funds/"
     FILE_PATH = os.path.join(os.path.dirname(__file__), "README.md")
 
@@ -111,6 +123,12 @@ class FundController(BaseController):
     sector        sector weightings
     equity        equity holdings[/cmds]{has_fund_usa_end}
     """
+        if self.fund_symbol != "" and self.country == "sweden":
+            help_text += """
+[src][Avanza][/src]
+    al_swe        display fund allocation (sector, country, holdings)
+    info_swe      get fund information
+    """
         console.print(text=help_text, menu="Mutual Funds")
 
     def custom_reset(self):
@@ -119,6 +137,7 @@ class FundController(BaseController):
             return ["funds", f"load {self.fund_name} --name"]
         return []
 
+    @log_start_end(log=logger)
     def call_country(self, other_args: List[str]):
         """Process country command"""
         parser = argparse.ArgumentParser(
@@ -149,6 +168,7 @@ class FundController(BaseController):
         console.print("")
         return self.queue
 
+    @log_start_end(log=logger)
     def call_search(self, other_args: List[str]):
         """Process country command"""
         parser = argparse.ArgumentParser(
@@ -213,6 +233,7 @@ class FundController(BaseController):
             )
         return self.queue
 
+    @log_start_end(log=logger)
     def call_overview(self, other_args: List[str]):
         """Process country command"""
         parser = argparse.ArgumentParser(
@@ -238,6 +259,7 @@ class FundController(BaseController):
             )
         return self.queue
 
+    @log_start_end(log=logger)
     def call_info(self, other_args: List[str]):
         """Process country command"""
         parser = argparse.ArgumentParser(
@@ -256,6 +278,7 @@ class FundController(BaseController):
             investpy_view.display_fund_info(self.fund_name, country=self.country)
         return self.queue
 
+    @log_start_end(log=logger)
     def call_load(self, other_args: List[str]):
         """Process country command"""
         parser = argparse.ArgumentParser(
@@ -326,6 +349,7 @@ Potential errors
         console.print("")
         return self.queue
 
+    @log_start_end(log=logger)
     def call_plot(self, other_args: List[str]):
         """Process country command"""
         parser = argparse.ArgumentParser(
@@ -349,6 +373,7 @@ Potential errors
             )
         return self.queue
 
+    @log_start_end(log=logger)
     def call_sector(self, other_args: List[str]):
         """Process sector command"""
         parser = argparse.ArgumentParser(
@@ -388,8 +413,9 @@ Potential errors
 
         return self.queue
 
+    @log_start_end(log=logger)
     def call_equity(self, other_args: List[str]):
-        """Process sector command"""
+        """Process equity command"""
         parser = argparse.ArgumentParser(
             add_help=False,
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -410,5 +436,94 @@ Potential errors
                 )
                 return self.queue
             yfinance_view.display_equity(self.fund_symbol)
+
+        return self.queue
+
+    @log_start_end(log=logger)
+    def call_al_swe(self, other_args: List[str]):
+        """Process al_swe command"""
+        parser = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            prog="al_swe",
+            description="Show allocation of a swedish fund.",
+        )
+        parser.add_argument(
+            "-f",
+            "--focus",
+            dest="focus",
+            type=str,
+            choices=self.focus_choices,
+            default="all",
+            help="The focus of the funds exposure/allocation",
+        )
+
+        ns_parser = parse_known_args_and_warn(parser, other_args)
+        if ns_parser:
+            ava_fund = pd.read_csv(
+                os.path.join(
+                    "gamestonk_terminal", "mutual_funds", "avanza_fund_ID.csv"
+                ),
+                index_col=0,
+            )
+            if self.country != "sweden":
+                console.print(
+                    "Avanza implementation currently only supports funds from sweden."
+                )
+                return self.queue
+            if self.fund_name == "":
+                if self.fund_symbol != "":
+                    self.fund_symbol = investpy_model.get_fund_name_from_symbol(
+                        self.fund_symbol
+                    )
+                else:
+                    console.print(
+                        "No fund loaded. Please use `load` first.\n", style="bold"
+                    )
+                    return self.queue
+            if self.fund_name.upper() not in ava_fund.index.str.upper().to_numpy():
+                console.print("No fund data. Please use another fund", style="bold")
+                return self.queue
+            avanza_view.display_allocation(self.fund_name, ns_parser.focus)
+
+        return self.queue
+
+    @log_start_end(log=logger)
+    def call_info_swe(self, other_args: List[str]):
+        """Process info_swe command"""
+        parser = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            prog="info_swe",
+            description="Show fund info of a swedish fund.",
+        )
+
+        ns_parser = parse_known_args_and_warn(parser, other_args)
+        if ns_parser:
+            ava_fund = pd.read_csv(
+                os.path.join(
+                    "gamestonk_terminal", "mutual_funds", "avanza_fund_ID.csv"
+                ),
+                index_col=0,
+            )
+            if self.country != "sweden":
+                console.print(
+                    "Avanza implementation currently only supports funds from sweden."
+                )
+                return self.queue
+            if self.fund_name == "":
+                if self.fund_symbol != "":
+                    self.fund_symbol = investpy_model.get_fund_name_from_symbol(
+                        self.fund_symbol
+                    )
+                else:
+                    console.print(
+                        "No fund loaded. Please use `load` first.\n", style="bold"
+                    )
+                    return self.queue
+            if self.fund_name.upper() not in ava_fund.index.str.upper().to_numpy():
+                console.print("No fund data. Please use another fund", style="bold")
+                return self.queue
+            avanza_view.display_info(self.fund_name)
 
         return self.queue

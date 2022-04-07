@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from gamestonk_terminal import feature_flags as gtff
 from gamestonk_terminal.config_terminal import theme
 from gamestonk_terminal.common.behavioural_analysis import finbrain_model
 from gamestonk_terminal.config_plot import PLOT_DPI
@@ -20,12 +19,13 @@ from gamestonk_terminal.helper_funcs import (
     print_rich_table,
 )
 from gamestonk_terminal.rich_config import console
+from gamestonk_terminal import rich_config
+
 
 logger = logging.getLogger(__name__)
 
 
-@log_start_end(log=logger)
-def sentiment_coloring(val: float, last_val: float) -> str:
+def lambda_sentiment_coloring(val: float, last_val: float) -> str:
     if float(val) > last_val:
         return f"[green]{val}[/green]"
     return f"[red]{val}[/red]"
@@ -49,6 +49,7 @@ def plot_sentiment(
         _, ax = plt.subplots(figsize=plot_autoscale(), dpi=PLOT_DPI)
     else:
         if len(external_axes) != 1:
+            logger.error("Expected list of one axis item.")
             console.print("[red]Expected list of one axis item./n[/red]")
             return
         (ax,) = external_axes
@@ -118,9 +119,9 @@ def display_sentiment_analysis(
 
     df_sentiment.sort_index(ascending=True, inplace=True)
 
-    if gtff.USE_COLOR:
+    if rich_config.USE_COLOR:
         color_df = df_sentiment["Sentiment Analysis"].apply(
-            sentiment_coloring, last_val=0
+            lambda_sentiment_coloring, last_val=0
         )
         color_df = pd.DataFrame(
             data=color_df.values,

@@ -15,7 +15,6 @@ import seaborn as sns
 
 from gamestonk_terminal.config_terminal import theme
 from gamestonk_terminal import config_plot as cfp
-from gamestonk_terminal import feature_flags as gtff
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import (
     export_data,
@@ -25,14 +24,14 @@ from gamestonk_terminal.helper_funcs import (
 )
 from gamestonk_terminal.rich_config import console
 from gamestonk_terminal.stocks.options import op_helpers, tradier_model
+from gamestonk_terminal import rich_config
 
 logger = logging.getLogger(__name__)
 
 column_map = {"mid_iv": "iv", "open_interest": "oi", "volume": "vol"}
 
 
-@log_start_end(log=logger)
-def red_highlight(val) -> str:
+def lambda_red_highlight(val) -> str:
     """Red highlight
 
     Parameters
@@ -48,8 +47,7 @@ def red_highlight(val) -> str:
     return f"[red]{val}[/red]"
 
 
-@log_start_end(log=logger)
-def green_highlight(val) -> str:
+def lambda_green_highlight(val) -> str:
     """Green highlight
 
     Parameters
@@ -155,16 +153,20 @@ def display_chains(
         puts_df = puts_df[puts_df.columns[::-1]]
         chain_table = calls_df.merge(puts_df, on="strike")
 
-        if gtff.USE_COLOR:
+        if rich_config.USE_COLOR:
             call_cols = [col for col in chain_table if col.endswith("_x")]
             put_cols = [col for col in chain_table if col.endswith("_y")]
             patch_pandas_text_adjustment()
             pd.set_option("display.max_colwidth", 0)
             pd.set_option("display.max_rows", None)
             for cc in call_cols:
-                chain_table[cc] = chain_table[cc].astype(str).apply(green_highlight)
+                chain_table[cc] = (
+                    chain_table[cc].astype(str).apply(lambda_green_highlight)
+                )
             for pc in put_cols:
-                chain_table[pc] = chain_table[pc].astype(str).apply(red_highlight)
+                chain_table[pc] = (
+                    chain_table[pc].astype(str).apply(lambda_red_highlight)
+                )
         headers = [
             col.strip("_x")
             if col.endswith("_x")
@@ -250,34 +252,38 @@ def plot_oi(
         _, ax = plt.subplots(figsize=plot_autoscale(), dpi=cfp.PLOT_DPI)
     else:
         if len(external_axes) != 1:
+            logger.error("Expected list of one axis item.")
             console.print("[red]Expected list of one axis item./n[/red]")
             return
         (ax,) = external_axes
 
     if not calls_only:
-        put_oi.plot(
+        line_1 = put_oi.plot(
             x="strike",
             y="open_interest",
-            label="Puts",
             ax=ax,
             marker="o",
             ls="-",
         )
+        label_1 = ["Puts"]
+        ax.legend([line_1], label_1)
+
     if not puts_only:
-        call_oi.plot(
+        line_2 = call_oi.plot(
             x="strike",
             y="open_interest",
-            label="Calls",
             ax=ax,
             marker="o",
             ls="-",
         )
+        label_2 = ["Calls"]
+        ax.legend([line_2], label_2)
+
     ax.axvline(current_price, lw=2, ls="--", label="Current Price", alpha=0.7)
     ax.axvline(max_pain, lw=3, label=f"Max Pain: {max_pain}", alpha=0.7)
     ax.set_xlabel("Strike Price")
     ax.set_ylabel("Open Interest (1k) ")
     ax.set_xlim(min_strike, max_strike)
-
     ax.set_title(f"Open Interest for {ticker.upper()} expiring {expiry}")
 
     theme.style_primary_axis(ax)
@@ -661,6 +667,7 @@ def display_historical(
         theme.visualize_output(force_tight_layout=False)
     else:
         if len(external_axes) != 2:
+            logger.error("Expected list of two axis item.")
             console.print("[red]Expected list of 2 axis items./n[/red]")
             return
         (ax1, ax2) = external_axes

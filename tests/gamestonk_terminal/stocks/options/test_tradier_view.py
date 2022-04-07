@@ -13,14 +13,14 @@ def vcr_config():
 
 
 @pytest.mark.vcr(record_mode="none")
-def test_red_highlight(recorder):
-    result = tradier_view.red_highlight(val="MOCK TEXT")
+def test_lambda_red_highlight(recorder):
+    result = tradier_view.lambda_red_highlight(val="MOCK TEXT")
     recorder.capture(result)
 
 
 @pytest.mark.vcr(record_mode="none")
-def test_green_highlight(recorder):
-    result = tradier_view.green_highlight(val="MOCK TEXT")
+def test_lambda_green_highlight(recorder):
+    result = tradier_view.lambda_green_highlight(val="MOCK TEXT")
     recorder.capture(result)
 
 
@@ -48,7 +48,9 @@ def test_display_chains(calls_only, max_sp, min_sp, mocker, puts_only):
     mocker.patch(target="gamestonk_terminal.stocks.options.tradier_view.export_data")
 
     # MOCK USE_COLOR
-    mocker.patch.object(target=tradier_view.gtff, attribute="USE_COLOR", new=True)
+    mocker.patch.object(
+        target=tradier_view.rich_config, attribute="USE_COLOR", new=True
+    )
 
     tradier_view.display_chains(
         ticker="AAPL",
@@ -85,7 +87,9 @@ def test_plot_oi(calls_only, max_sp, min_sp, mocker, puts_only):
     mocker.patch(target="gamestonk_terminal.stocks.options.tradier_view.export_data")
 
     # MOCK USE_COLOR
-    mocker.patch.object(target=tradier_view.gtff, attribute="USE_COLOR", new=True)
+    mocker.patch.object(
+        target=tradier_view.rich_config, attribute="USE_COLOR", new=True
+    )
 
     tradier_view.plot_oi(
         ticker="AAPL",
@@ -121,7 +125,9 @@ def test_plot_vol(calls_only, max_sp, min_sp, mocker, puts_only):
     mocker.patch(target="gamestonk_terminal.stocks.options.tradier_view.export_data")
 
     # MOCK USE_COLOR
-    mocker.patch.object(target=tradier_view.gtff, attribute="USE_COLOR", new=True)
+    mocker.patch.object(
+        target=tradier_view.rich_config, attribute="USE_COLOR", new=True
+    )
 
     tradier_view.plot_vol(
         ticker="AAPL",
@@ -153,7 +159,9 @@ def test_plot_volume_open_interest(max_sp, min_sp, min_vol, mocker):
     mocker.patch(target="gamestonk_terminal.stocks.options.tradier_view.export_data")
 
     # MOCK USE_COLOR
-    mocker.patch.object(target=tradier_view.gtff, attribute="USE_COLOR", new=True)
+    mocker.patch.object(
+        target=tradier_view.rich_config, attribute="USE_COLOR", new=True
+    )
 
     tradier_view.plot_volume_open_interest(
         ticker="AAPL",
@@ -177,7 +185,9 @@ def test_display_historical(mocker):
     mocker.patch(target="gamestonk_terminal.stocks.options.tradier_view.export_data")
 
     # MOCK USE_COLOR
-    mocker.patch.object(target=tradier_view.gtff, attribute="USE_COLOR", new=True)
+    mocker.patch.object(
+        target=tradier_view.rich_config, attribute="USE_COLOR", new=True
+    )
 
     tradier_view.display_historical(
         ticker="AAPL",

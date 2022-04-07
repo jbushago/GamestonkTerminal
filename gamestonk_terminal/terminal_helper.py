@@ -11,7 +11,6 @@ import sys
 from datetime import datetime
 from typing import List
 import ascii_magic
-
 import matplotlib.pyplot as plt
 
 from gamestonk_terminal import feature_flags as gtff
@@ -52,7 +51,7 @@ def print_goodbye():
         goodbye_msg[random.randint(0, len(goodbye_msg) - 1)] + goodbye_msg_time + "\n"
     )
 
-    logger.info("Terminal stopped")
+    logger.info("END")
 
 
 def sha256sum(filename):
@@ -143,7 +142,7 @@ def bootup():
             # pylint: disable=E1101
             sys.stdout.reconfigure(encoding="utf-8")
     except Exception as e:
-        logger.exception("%s", type(e).__name__)
+        logger.exception("Exception: %s", str(e))
         console.print(e, "\n")
 
 
@@ -159,7 +158,7 @@ def welcome_message():
         try:
             thought.get_thought_of_the_day()
         except Exception as e:
-            logger.exception("%s", type(e).__name__)
+            logger.exception("Exception: %s", str(e))
             console.print(e)
         console.print("")
 
@@ -167,6 +166,7 @@ def welcome_message():
 def reset(queue: List[str] = None):
     """Resets the terminal.  Allows for checking code or keys without quitting"""
     console.print("resetting...")
+    logger.info("resetting")
     plt.close("all")
 
     if queue and len(queue) > 0:

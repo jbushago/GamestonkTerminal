@@ -11,16 +11,16 @@ from typing import List
 
 import pandas as pd
 
-from gamestonk_terminal import feature_flags as gtff
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import (
-    financials_colored_values,
+    lambda_financials_colored_values,
     parse_known_args_and_warn,
     patch_pandas_text_adjustment,
     print_rich_table,
 )
 from gamestonk_terminal.rich_config import console
 from gamestonk_terminal.stocks.fundamental_analysis import market_watch_model as mwm
+from gamestonk_terminal import rich_config
 
 # pylint: disable=too-many-branches
 
@@ -79,8 +79,8 @@ def income(other_args: List[str], ticker: str):
 
     df_financials = mwm.prepare_df_financials(ticker, "income", ns_parser.b_quarter)
 
-    if gtff.USE_COLOR:
-        df_financials = df_financials.applymap(financials_colored_values)
+    if rich_config.USE_COLOR:
+        df_financials = df_financials.applymap(lambda_financials_colored_values)
 
         patch_pandas_text_adjustment()
         pd.set_option("display.max_colwidth", None)
@@ -156,8 +156,8 @@ def balance(other_args: List[str], ticker: str):
 
     df_financials = mwm.prepare_df_financials(ticker, "balance", ns_parser.b_quarter)
 
-    if gtff.USE_COLOR:
-        df_financials = df_financials.applymap(financials_colored_values)
+    if rich_config.USE_COLOR:
+        df_financials = df_financials.applymap(lambda_financials_colored_values)
 
         patch_pandas_text_adjustment()
         pd.set_option("display.max_colwidth", None)
@@ -229,8 +229,8 @@ def cash(other_args: List[str], ticker: str):
 
     df_financials = mwm.prepare_df_financials(ticker, "cashflow", ns_parser.b_quarter)
 
-    if gtff.USE_COLOR:
-        df_financials = df_financials.applymap(financials_colored_values)
+    if rich_config.USE_COLOR:
+        df_financials = df_financials.applymap(lambda_financials_colored_values)
 
         patch_pandas_text_adjustment()
         pd.set_option("display.max_colwidth", None)
@@ -261,7 +261,10 @@ def display_sean_seah_warnings(ticker: str, debug: bool = False):
         return
 
     print_rich_table(
-        financials, headers=list(financials.columns), title="Sean Seah Warnings"
+        financials,
+        headers=list(financials.columns),
+        title="Sean Seah Warnings",
+        show_index=True,
     )
 
     if not warnings:
