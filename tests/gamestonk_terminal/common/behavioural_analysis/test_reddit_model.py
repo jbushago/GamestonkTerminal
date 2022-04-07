@@ -1,5 +1,5 @@
-from gamestonk_terminal.common.behavioural_analysis import reddit_model
 from unittest.mock import patch, Mock
+from gamestonk_terminal.common.behavioural_analysis import reddit_model
 
 # @pytest.mark.parametrize(
 #     "get_posts_about",
