@@ -273,7 +273,11 @@ def display_due_diligence(
 
 @log_start_end(log=logger)
 def display_reddit_sent(
-    search: str, subreddits: str, time: str, dump_raw_data: bool = False, dump_preprocessed_data: bool = False,
+    search: str,
+    subreddits: str,
+    time: str,
+    dump_raw_data: bool = False,
+    dump_preprocessed_data: bool = False,
 ):
     """Determine Reddit sentiment about a search term
 
@@ -297,7 +301,11 @@ def display_reddit_sent(
         for post in posts:
             console.print(post.selftext)
     texts = [p.selftext for p in posts]
-    tlcs = list(chain.from_iterable([[tlc.body for tlc in p.comments] for p in posts if p.comments]))
+    tlcs = list(
+        chain.from_iterable(
+            [[tlc.body for tlc in p.comments] for p in posts if p.comments]
+        )
+    )
     texts.extend(tlcs)
     corpus = reddit_model.prepare_corpus(texts)
     if dump_preprocessed_data:

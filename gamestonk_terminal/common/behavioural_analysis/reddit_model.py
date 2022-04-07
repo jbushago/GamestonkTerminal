@@ -570,11 +570,13 @@ def prepare_corpus(docs: List[str]) -> List[str]:
     docs = [doc.lower().strip() for doc in docs]
     stemmer = PorterStemmer()
     docs = [stemmer.stem(doc) for doc in docs]
+
     def clean_text(doc):
         out = []
         for c in doc:
             if c.isalpha() or c.isspace():
                 out.append(c)
         return "".join(out)
+
     docs = [clean_text(doc) for doc in docs]
     return docs
