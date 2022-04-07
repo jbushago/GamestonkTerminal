@@ -567,3 +567,64 @@ def get_due_dilligence(
             console.print(f"[red]Invalid response: {str(e)}[/red]\n")
 
     return subs
+
+
+@log_start_end(log=logger)
+def get_posts_about(
+    subreddits: List[str], search: str, time: str
+) -> List[praw.models.reddit.submission.Submission]:
+    """Finds posts related to a specific search term in Reddit
+
+    Parameters
+    ----------
+    subreddits: List[str]
+        List of strings specifying what subreddits to search through
+    search: str
+        String to search for
+    time: str
+        A timeframe to limit the search to (all, year, month, week, day)
+
+    Returns
+    -------
+    List[praw.models.reddit.submission.Submission]
+        List of submissions related to the search term
+    """
+    praw_api = praw.Reddit(
+        client_id=cfg.API_REDDIT_CLIENT_ID,
+        client_secret=cfg.API_REDDIT_CLIENT_SECRET,
+        username=cfg.API_REDDIT_USERNAME,
+        user_agent=cfg.API_REDDIT_USER_AGENT,
+        password=cfg.API_REDDIT_PASSWORD,
+    )
+    sub_str = "+".join(subreddits)
+    subreddit = praw_api.subreddit(sub_str)
+    posts = subreddit.search(search, limit=100, time_filter=time)
+    posts = [p for p in posts if p.selftext]
+    return posts
+
+
+@log_start_end(log=logger)
+def prepare_corpus(docs: List[str]) -> List[str]:
+    """Cleans and prepares a list of documents for sentiment analysis
+
+    Parameters
+    ----------
+    docs: List[str]
+        A list of documents to prepare for sentiment analysis
+
+    Returns
+    -------
+    List[str]
+        List of cleaned and prepared docs
+    """
+    docs = [doc.lower().strip() for doc in docs]
+
+    def clean_text(doc):
+        out = []
+        for c in doc:
+            if c.isalpha() or c.isspace():
+                out.append(c)
+        return "".join(out)
+
+    docs = [clean_text(doc) for doc in docs]
+    return docs
