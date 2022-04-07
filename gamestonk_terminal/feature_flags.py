@@ -77,4 +77,4 @@ LOG_COLLECTION = strtobool(os.getenv("GTFF_LOG_COLLECTION", "False"))
 ONLY_SEND_FILE_SIZE = strtobool(os.getenv("GTFF_ONLY_SEND_FILE_SIZE", "False"))
 
 # Provide export folder path. If empty that means default.
-# EXPORT_FOLDER_PATH = os.getenv("GTFF_EXPORT_FOLDER_PATH", "")
+EXPORT_FOLDER_PATH = os.getenv("GTFF_EXPORT_FOLDER_PATH", "")
