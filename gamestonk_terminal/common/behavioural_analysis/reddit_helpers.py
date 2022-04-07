@@ -110,12 +110,8 @@ def get_ticker_sector(ticker: str) -> str:
         sector of ticker
     """
     ticker = yf.Ticker(ticker)
-    try:
-        sector = ticker.info["sector"]
-    except KeyError:
-        sector = ""
-
-    return sector
+    info = ticker.info
+    return info["sector"] if "sector" in info else ""
 
 
 def get_ticker_quote_type(ticker: str) -> str:
@@ -132,12 +128,8 @@ def get_ticker_quote_type(ticker: str) -> str:
         quote type of ticker
     """
     ticker = yf.Ticker(ticker)
-    try:
-        quote_type = ticker.info["quoteType"]
-    except:
-        quote_type = ""
-
-    return quote_type
+    info = ticker.info
+    return info["quoteType"] if "quoteType" in info else ""
 
 
 def sector_to_subreddit_list(sector: str) -> List[str]:
