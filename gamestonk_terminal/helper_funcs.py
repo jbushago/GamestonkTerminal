@@ -833,17 +833,20 @@ def parse_known_args_and_warn(
         if export_allowed == EXPORT_ONLY_RAW_DATA_ALLOWED:
             choices_export = ["csv", "json", "xlsx"]
             help_export = "Export raw data into csv, json, xlsx"
+            default_export = choices_export[0]
         elif export_allowed == EXPORT_ONLY_FIGURES_ALLOWED:
             choices_export = ["png", "jpg", "pdf", "svg"]
             help_export = "Export figure into png, jpg, pdf, svg "
+            default_export = choices_export[0]
         else:
             choices_export = ["csv", "json", "xlsx", "png", "jpg", "pdf", "svg"]
             help_export = "Export raw data into csv, json, xlsx and figure into png, jpg, pdf, svg "
-
+            default_export = choices_export[0]
         parser.add_argument(
             "--export",
-            default="",
-            type=check_file_type_saved(choices_export),
+            choices=choices_export,
+            default=default_export if gtff.ENABLE_AUTOSAVE else "",
+            type=str,
             dest="export",
             help=help_export,
         )
@@ -1134,7 +1137,6 @@ def export_data(
     export_type: str, dir_path: str, func_name: str, df: pd.DataFrame = pd.DataFrame()
 ) -> None:
     """Export data to a file.
-
     Parameters
     ----------
     export_type : str
@@ -1147,46 +1149,44 @@ def export_data(
         Dataframe of data to save
     """
     if export_type:
-        now = datetime.now()
+        if gtff.EXPORT_DIRECTORY:
+            if not os.path.exists(gtff.EXPORT_DIRECTORY):
+                console.print(
+                    "Export directory does not exist: %s", gtff.EXPORT_DIRECTORY
+                )
+                return
 
-        if gtff.EXPORT_FOLDER_PATH:
-            full_path_dir = gtff.EXPORT_FOLDER_PATH
-            path_cmd = dir_path.split("gamestonk_terminal/")[1].replace("/", "_")
-            default_filename = f"{now.strftime('%Y%m%d_%H%M%S')}_{path_cmd}_{func_name}"
-
+            export_dir = gtff.EXPORT_DIRECTORY
         else:
-            full_path_dir = dir_path.replace("gamestonk_terminal", "exports")
-            default_filename = f"{func_name}_{now.strftime('%Y%m%d_%H%M%S')}"
+            export_dir = dir_path.replace("gamestonk_terminal", "exports")
+        now = datetime.now()
+        full_path = os.path.abspath(
+            os.path.join(
+                export_dir,
+                f"{func_name}_{now.strftime('%Y%m%d_%H%M%S')}",
+            )
+        )
+
+        if "," not in export_type:
+            export_type += ","
 
         for exp_type in export_type.split(","):
+            if exp_type:
+                saved_path = f"{full_path}.{exp_type}"
 
-            # In this scenario the path was provided, e.g. --export pt.csv, pt.jpg
-            if "." in exp_type:
-                saved_path = os.path.join(full_path_dir, exp_type)
-            # In this scenario we use the default filename
-            else:
-                saved_path = os.path.join(
-                    full_path_dir, f"{default_filename}.{exp_type}"
-                )
+                if exp_type == "csv":
+                    df.to_csv(saved_path)
+                elif exp_type == "json":
+                    df.to_json(saved_path)
+                elif exp_type in "xlsx":
+                    df.to_excel(saved_path, index=True, header=True)
+                elif exp_type in {"png", "jpg", "pdf", "svg"}:
+                    plt.savefig(saved_path)
+                else:
+                    console.print("Wrong export file specified.\n")
+                    return
 
-            if exp_type.endswith("csv"):
-                df.to_csv(saved_path)
-            elif exp_type.endswith("json"):
-                df.to_json(saved_path)
-            elif exp_type.endswith("xlsx"):
-                df.to_excel(saved_path, index=True, header=True)
-            elif exp_type.endswith("png"):
-                plt.savefig(saved_path)
-            elif exp_type.endswith("jpg"):
-                plt.savefig(saved_path)
-            elif exp_type.endswith("pdf"):
-                plt.savefig(saved_path)
-            elif exp_type.endswith("svg"):
-                plt.savefig(saved_path)
-            else:
-                console.print("Wrong export file specified.\n")
-
-            console.print(f"Saved file: {saved_path}\n")
+                console.print(f"Saved file: {saved_path}\n")
 
 
 def get_rf() -> float:

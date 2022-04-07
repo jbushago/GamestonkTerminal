@@ -61,6 +61,12 @@ ENABLE_RICH = strtobool(os.getenv("GTFF_ENABLE_RICH", "True"))
 # Use the colorful rich terminal
 ENABLE_RICH_PANEL = strtobool(os.getenv("GTFF_ENABLE_RICH_PANEL", "True"))
 
+# Autosave tables and images to 'downloads' directory
+ENABLE_AUTOSAVE = strtobool(os.getenv("GTFF_ENABLE_AUTOSAVE", "False"))
+
+# Autosave directory for figures
+EXPORT_DIRECTORY = os.getenv("GTFF_EXPORT_DIRECTORY", "")
+
 # Check API KEYS before running a command
 ENABLE_CHECK_API = strtobool(os.getenv("GTFF_ENABLE_CHECK_API", "True"))
 

@@ -53,6 +53,8 @@ class SettingsController(BaseController):
         "pheight",
         "pwidth",
         "monitor",
+        "autosave",
+        "directory",
     ]
     PATH = "/settings/"
     env_file = ".env"
@@ -114,7 +116,9 @@ class SettingsController(BaseController):
         color = "green" if gtff.USE_CMD_LOCATION_FIGURE else "red"
         help_text += f"   [{color}]cmdloc           command location displayed in figures[/{color}]\n"
         color = "green" if gtff.USE_PLOT_AUTOSCALING else "red"
-        help_text += f"   [{color}]autoscaling      plot autoscaling[/{color}]\n\n"
+        help_text += f"   [{color}]autoscaling      plot autoscaling[/{color}]\n"
+        color = "green" if gtff.ENABLE_AUTOSAVE else "red"
+        help_text += f"   [{color}]autosave         download outputted figures to downloads directory[/{color}]\n\n"
         color = "green" if gtff.USE_DATETIME else "red"
         help_text += f"   [{color}]dt               add date and time to command line[/{color}]\n"
         help_text += "[cmds]   flair            console flair[/cmds]\n\n"
@@ -144,6 +148,9 @@ class SettingsController(BaseController):
         help_text += f"[param]PLOT_HEIGHT_PERCENTAGE:[/param]   {cfg_plot.PLOT_HEIGHT_PERCENTAGE}%\n"
         help_text += f"[param]PLOT_WIDTH_PERCENTAGE:[/param]    {cfg_plot.PLOT_WIDTH_PERCENTAGE}%\n"
         help_text += f"[param]MONITOR:[/param]                  {cfg_plot.MONITOR}\n"
+        help_text += (
+            f"[param]EXPORT_DIRECTORY:[/param]         {gtff.EXPORT_DIRECTORY}\n"
+        )
 
         # color = "green" if gtff.USE_FLAIR else "red"
         # help_text += f"   [{color}]cls        clear console after each command[/{color}]\n"
@@ -288,6 +295,50 @@ class SettingsController(BaseController):
             self.env_file, "GTFF_USE_PLOT_AUTOSCALING", str(gtff.USE_PLOT_AUTOSCALING)
         )
         console.print("")
+
+    def call_autosave(self, _):
+        """Process autosave command"""
+        gtff.ENABLE_AUTOSAVE = not gtff.ENABLE_AUTOSAVE
+        dotenv.set_key(self.env_file, "GTFF_ENABLE_AUTOSAVE", str(gtff.ENABLE_AUTOSAVE))
+        console.print("")
+
+    def call_directory(self, other_args: List[str]):
+        """Process directory command"""
+        parser = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            prog="directory",
+            description="directory for autosave",
+        )
+        parser.add_argument(
+            "-p",
+            "--path",
+            type=str,
+            dest="path",
+            help="path",
+        )
+        parser.add_argument(
+            "-r",
+            "--reset",
+            action="store_true",
+            dest="reset",
+            help="reset directory to invalid path",
+        )
+        if other_args and "-" not in other_args[0][0]:
+            other_args.insert(0, "-p")
+        ns_parser = parse_known_args_and_warn(parser, other_args)
+
+        if ns_parser:
+            if ns_parser.reset:
+                console.print("Directory reset successfully")
+                gtff.EXPORT_DIRECTORY = ""
+                return
+            if not os.path.exists(ns_parser.path):
+                console.print(f"Directory does not exist: {ns_parser.path}")
+                return
+            dotenv.set_key(self.env_file, "GTFF_EXPORT_DIRECTORY", str(ns_parser.path))
+            gtff.EXPORT_DIRECTORY = ns_parser.path
+            console.print("")
 
     @log_start_end(log=logger)
     def call_dpi(self, other_args: List[str]):
