@@ -51,6 +51,7 @@ def get_subreddits_for_ticker(ticker: str) -> List[str]:
         "wallstreetbets",
         "stocks",
         "investing",
+        "Daytrading",
         "pennystocks",
         "robinhood",
         "GME",
@@ -127,8 +128,8 @@ def get_ticker_quote_type(ticker: str) -> str:
     str
         quote type of ticker
     """
-    ticker = yf.Ticker(ticker)
-    info = ticker.info
+    yf_ticker = yf.Ticker(ticker)
+    info = yf_ticker.info
     return info["quoteType"] if "quoteType" in info else ""
 
 

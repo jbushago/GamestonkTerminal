@@ -13,7 +13,10 @@ from psaw import PushshiftAPI
 from requests import HTTPError
 
 from gamestonk_terminal import config_terminal as cfg
-from gamestonk_terminal.common.behavioural_analysis.reddit_helpers import find_tickers
+from gamestonk_terminal.common.behavioural_analysis.reddit_helpers import (
+    find_tickers,
+    ticker_to_name,
+)
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.rich_config import console
 
@@ -516,3 +519,50 @@ def get_due_dilligence(
             break
 
     return subs
+
+
+@log_start_end(log=logger)
+def get_ticker_posts(
+    subreddits: List[str], ticker: str, sub_limit: int = 100
+) -> List[praw.models.reddit.submission.Submission]:
+    """Finds posts related to a specific search term in Reddit
+    Parameters
+    ----------
+    subreddits: List[str]
+        List of strings specifying what subreddits to search through
+    ticker: str
+        String to search for
+    sub_limit: int
+        A timeframe to limit the search to (all, year, month, week, day)
+    Returns
+    -------
+    List[praw.models.reddit.submission.Submission]
+        List of submissions related to the search term
+    """
+
+    praw_api = praw.Reddit(
+        client_id=cfg.API_REDDIT_CLIENT_ID,
+        client_secret=cfg.API_REDDIT_CLIENT_SECRET,
+        username=cfg.API_REDDIT_USERNAME,
+        user_agent=cfg.API_REDDIT_USER_AGENT,
+        password=cfg.API_REDDIT_PASSWORD,
+    )
+
+    # https://pushshift.io/api-parameters/
+    psaw_api = PushshiftAPI()
+
+    submissions = []
+    ticker_name = ticker_to_name(ticker)
+    for subreddit in subreddits:
+        api_sub_gen = psaw_api.search_submissions(
+            limit=sub_limit,
+            subreddit=subreddit,
+            q=f"{ticker}|{ticker_name}",
+            mod_removed=True,
+            filter=["id"],
+        )
+
+        new_subs = [praw_api.submission(id=post.id) for post in api_sub_gen]
+        submissions.extend(new_subs)
+
+    return submissions
