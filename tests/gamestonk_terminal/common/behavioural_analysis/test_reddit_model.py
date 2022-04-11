@@ -1,14 +1,6 @@
 from unittest.mock import patch, Mock
 from gamestonk_terminal.common.behavioural_analysis import reddit_model
 
-# @pytest.mark.parametrize(
-#     "get_posts_about",
-#     [
-#         #Tuple with input and expected
-#         ("0", tuple([[], dict, 0])),
-#     ],
-# )
-
 
 @patch("praw.Reddit")
 def test_get_posts_about(reddit_mock):
