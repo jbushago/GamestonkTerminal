@@ -1,5 +1,5 @@
-from unittest.mock import patch, Mock
-from gamestonk_terminal.common.behavioural_analysis import reddit_view
+# from unittest.mock import patch, Mock
+# from gamestonk_terminal.common.behavioural_analysis import reddit_view
 
 
 def test_display_popular_tickers():
