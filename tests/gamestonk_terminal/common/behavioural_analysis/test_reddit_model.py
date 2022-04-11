@@ -9,7 +9,6 @@ from gamestonk_terminal.common.behavioural_analysis import reddit_model
 #     ],
 # )
 
-
 @patch("praw.Reddit")
 def test_get_posts_about(reddit_mock):
     api_mock = Mock()

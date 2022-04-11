@@ -29,3 +29,7 @@ jobs:
         with:
           personal_token: ${{ secrets.DEPLOY_TOKEN }}
           publish_dir: ./website/public
+
+      - name: tern-action
+        uses: philips-labs/tern-action@v1.3.0
+
