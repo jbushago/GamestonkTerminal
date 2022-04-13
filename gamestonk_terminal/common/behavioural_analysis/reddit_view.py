@@ -303,6 +303,11 @@ def display_reddit_sent(
         for post in posts:
             console.print(post.selftext)
     texts = [p.selftext for p in posts]
+    for  p in posts:
+        if p.comments:
+            console.print("p.comments = "+str(p.comments))
+            for tlc in p.comments:
+                console.print("tlc = "+str(tlc)+" type = "+str(type(tlc)))
     tlcs = list(
         chain.from_iterable(
             [[tlc.body for tlc in p.comments] for p in posts if p.comments]
