@@ -577,29 +577,3 @@ def prepare_corpus(docs: List[str]) -> List[str]:
 
     docs = [clean_text(doc) for doc in docs]
     return docs
-
-@log_start_end(log=logger)
-def extract_comments(docs: List[str]) -> List[praw.models.reddit.comment.Comment]:
-    """Cleans and prepares a list of documents for sentiment analysis
-
-    Parameters
-    ----------
-    docs: List[str]
-        A list of documents to prepare for sentiment analysis
-
-    Returns
-    -------
-    List[str]
-        List of cleaned and prepared docs
-    """
-    docs = [doc.lower().strip() for doc in docs]
-
-    def clean_text(doc):
-        out = []
-        for c in doc:
-            if c.isalpha() or c.isspace():
-                out.append(c)
-        return "".join(out)
-
-    docs = [clean_text(doc) for doc in docs]
-    return docs
