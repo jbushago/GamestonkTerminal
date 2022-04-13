@@ -303,29 +303,12 @@ def display_reddit_sent(
         for post in posts:
             console.print(post.selftext)
     texts = [p.selftext for p in posts]    
-    tlcs = []
-    for p in posts:
-        if p.comments:
-            for tlc in p.comments:
-                console.print(str(type(tlc)))
-                if isinstance(tlc, praw.models.reddit.comment.Comment):
-                    tlcs.append(tlc.body)
-                else:
-                    console.print("tlc = "+str(tlc))
-                    console.print(".comments = "+str(tlc.comments()))
-                    var = [comment.body for comment in tlc.comments().comments]
-                    tlcs.extend(var)
-    
-    # tlcs = list(
-    #     chain.from_iterable(
-    #         [[tlc.body for tlc in p.comments] for p in posts if p.comments]
-    #     )
-    # )
+    tlcs = reddit_model.get_comments(posts)
     texts.extend(tlcs)
     corpus = reddit_model.prepare_corpus(texts)
     if dump_preprocessed_data:
         for doc in corpus:
             console.print(doc)
     corpus_blob = TextBlob(''.join(corpus))
-    console.print(f"Sentiment Analysis for {ticker} is {corpus_blob.sentiment.polarity}")
+    console.print(f"Sentiment Analysis for {search} is {corpus_blob.sentiment.polarity}")
     

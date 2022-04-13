@@ -552,30 +552,39 @@ def get_posts_about(
     return posts
 
 @log_start_end(log=logger)
-def get_comments(comments: List[praw.models.reddit.more.MoreComments]) -> List[praw.models.reddit.comment.Comment]:
+def get_comments(posts: List[praw.models.reddit.submission.Submission]) -> List[praw.models.reddit.comment.Comment]:
     """Cleans and prepares a list of documents for sentiment analysis
 
     Parameters
     ----------
-    docs: List[str]
-        A list of documents to prepare for sentiment analysis
+    comments: List[praw.models.reddit.submission.Submission]
+        Lists of all reddit posts to extract the comments from
 
     Returns
     -------
-    List[str]
-        List of cleaned and prepared docs
+    List[praw.models.reddit.comment.Comment]
+        List of all the text from each comment
     """
-    docs = [doc.lower().strip() for doc in docs]
+    def get_more_comments(comments):
+        sub_tlcs = []
+        for comment in comments:
+            if isinstance(comment, praw.models.reddit.comment.Comment):
+                sub_tlcs.append(comment.body)
+            else:
+                sub_comments = get_more_comments(comment.comments())
+                sub_tlcs.extend(sub_comments)
+        return sub_tlcs
 
-    def clean_text(doc):
-        out = []
-        for c in doc:
-            if c.isalpha() or c.isspace():
-                out.append(c)
-        return "".join(out)
-
-    docs = [clean_text(doc) for doc in docs]
-    return docs
+    tlcs = []
+    for p in posts:
+        if p.comments:
+            for tlc in p.comments:
+                if isinstance(tlc, praw.models.reddit.comment.Comment):
+                    tlcs.append(tlc.body)
+                else:
+                    sub_comments = get_more_comments(tlc.comments())
+                    tlcs.extend(sub_comments)
+    return tlcs
 
 
 @log_start_end(log=logger)
