@@ -9,8 +9,10 @@ from datetime import datetime
 from typing import Dict
 
 import finviz
+from matplotlib import ticker
 import pandas as pd
 import praw
+from textblob import TextBlob
 
 from gamestonk_terminal.common.behavioural_analysis import reddit_model
 from gamestonk_terminal.decorators import log_start_end
@@ -311,3 +313,6 @@ def display_reddit_sent(
     if dump_preprocessed_data:
         for doc in corpus:
             console.print(doc)
+    corpus_blob = TextBlob(''.join(corpus))
+    console.print(f"Sentiment Analysis for {ticker} is {corpus_blob.sentiment.polarity}")
+    
