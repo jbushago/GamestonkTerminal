@@ -6,14 +6,20 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
 import finviz
+import nltk
 import pandas as pd
 import praw
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
 from prawcore.exceptions import ResponseException
 from psaw import PushshiftAPI
 from requests import HTTPError
+from tqdm import tqdm
+
 
 from gamestonk_terminal import config_terminal as cfg
-from gamestonk_terminal.common.behavioural_analysis.reddit_helpers import find_tickers
+from gamestonk_terminal.common.behavioural_analysis.reddit_helpers import (
+    find_tickers, get_subreddits_for_ticker, ticker_to_name)
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.rich_config import console
 
@@ -516,3 +522,172 @@ def get_due_dilligence(
             break
 
     return subs
+
+
+@log_start_end(log=logger)
+def get_posts_about(
+    ticker: str, limit: int, sort: str, time_frame: str
+) -> List[praw.models.reddit.submission.Submission]:
+    """Finds posts related to a specific search term in Reddit
+
+    Parameters
+    ----------
+    ticker: str
+        Ticker to search for
+    limit: int
+        Number of posts to get per subreddit
+    sort: str
+        Searc type
+        Possibilities: "relevance", "hot", "top", "new", or "comments"
+    time_frame: str
+        Relative time of post
+        Possibilities: "hour", "day", "week", "month", "year", "all"
+
+    Returns
+    -------
+    List[praw.models.reddit.submission.Submission]
+        List of submissions related to the search term
+    """
+    console.print("Authenticating PRAW API credentials")
+
+    praw_api = praw.Reddit(
+        client_id=cfg.API_REDDIT_CLIENT_ID,
+        client_secret=cfg.API_REDDIT_CLIENT_SECRET,
+        username=cfg.API_REDDIT_USERNAME,
+        user_agent=cfg.API_REDDIT_USER_AGENT,
+        password=cfg.API_REDDIT_PASSWORD,
+    )
+
+    subreddits = get_subreddits_for_ticker(ticker)
+    console.print(f"Found {len(subreddits)} subreddits to search")
+    ticker_name = ticker_to_name(ticker)
+
+    posts = []
+    post_ids = set()
+
+    def search(query: str):
+        console.print(f"Searching for: {query}")
+        for sub_str in tqdm(subreddits):
+            subreddit = praw_api.subreddit(sub_str)
+            submissions = subreddit.search(
+                query=query,
+                limit=limit,
+                sort=sort,
+                time_filter=time_frame,
+            )
+
+            for sub in submissions:
+                if (
+                    sub.selftext
+                    and sub.title
+                    and not sub.removed_by_category
+                    and sub.id not in post_ids
+                ):
+                    post_ids.add(sub.id)
+                    posts.append(sub)
+
+    search(f"title:{ticker}")
+    search(f"title:{ticker_name}")
+
+    # fallback if no posts found
+    if not posts:
+        search(ticker)
+    if not posts:
+        search(ticker_name)
+
+    return posts
+
+
+@log_start_end(log=logger)
+def get_comments(
+    post: praw.models.reddit.submission.Submission,
+) -> List[praw.models.reddit.comment.Comment]:
+    """Cleans and prepares a list of documents for sentiment analysis
+
+    Parameters
+    ----------
+    post: praw.models.reddit.submission.Submission
+        Lists of all reddit posts to extract the comments from
+
+    Returns
+    -------
+    List[praw.models.reddit.comment.Comment]
+        List of all the text from each comment
+    """
+
+    def get_more_comments(comments):
+        sub_tlcs = []
+        for comment in comments:
+            if isinstance(comment, praw.models.reddit.comment.Comment):
+                sub_tlcs.append(comment.body)
+            else:
+                sub_comments = get_more_comments(comment.comments())
+                sub_tlcs.extend(sub_comments)
+        return sub_tlcs
+
+    tlcs = []
+    if post.comments:
+        for tlc in post.comments:
+            if isinstance(tlc, praw.models.reddit.comment.Comment):
+                tlcs.append(tlc.body)
+            else:
+                sub_comments = get_more_comments(tlc.comments())
+                tlcs.extend(sub_comments)
+    return tlcs
+
+
+@log_start_end(log=logger)
+def prepare_corpus(docs: List[str]) -> List[str]:
+    """Cleans and prepares a list of documents for sentiment analysis
+
+    Parameters
+    ----------
+    docs: List[str]
+        A list of documents to prepare for sentiment analysis
+
+    Returns
+    -------
+    List[str]
+        List of cleaned and prepared docs
+    """
+    docs = [doc.lower().strip() for doc in docs]
+
+    def clean_text(doc):
+        out = []
+        for c in doc:
+            if c.isalpha() or c.isspace():
+                out.append(c)
+        return "".join(out)
+
+    docs = [clean_text(doc) for doc in docs]
+    return docs
+
+
+@log_start_end(log=logger)
+def clean_reddit_text(docs: List[str]) -> List[str]:
+    """Tokenizes and cleans a list of documents for sentiment analysis
+
+    Parameters
+    ----------
+    docs: List[str]
+        A list of documents to prepare for sentiment analysis
+
+    Returns
+    -------
+    List[str]
+        List of cleaned and prepared docs
+    """
+    nltk.download("stopwords", quiet=True)
+    stop_words = set(stopwords.words("english"))
+    tk = RegexpTokenizer(r"[A-Za-z\']+")
+
+    clean = []
+    for d in docs:
+        # remove links
+        tokens = tk.tokenize(d)
+
+        for word in tokens:
+            tmp = word.lower()
+            if tmp not in stop_words:
+                clean.append(tmp)
+    return clean

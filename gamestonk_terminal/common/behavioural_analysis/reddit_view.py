@@ -5,11 +5,15 @@ import logging
 import os
 import warnings
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List
 
 import finviz
+import matplotlib.pyplot as plt
 import pandas as pd
 import praw
+from textblob import TextBlob
+import seaborn as sns
+from tqdm import tqdm
 
 from gamestonk_terminal.common.behavioural_analysis import reddit_model
 from gamestonk_terminal.decorators import log_start_end
@@ -268,3 +272,93 @@ def display_due_diligence(
         print_and_record_reddit_post({}, sub)
     if not subs:
         console.print(f"No DD posts found for {ticker}\n")
+
+
+@log_start_end(log=logger)
+def display_reddit_sent(
+    ticker: str,
+    sort: str,
+    limit: int,
+    time_frame: str,
+    full_search: bool,
+    graphic: bool,
+    dump_raw_data: bool = False,
+    export: str = "",
+):
+    """Determine Reddit sentiment about a search term
+
+    Parameters
+    ----------
+    ticker: str
+        The ticker being search for in Reddit
+    sort: str
+        Type of search
+    time_frame: str
+        time frame for search
+    full_search: bool
+        enable comprehensive search for ticker
+    limit: str
+        Number of
+    dump_raw_data: bool
+        Outputs raw search results to the terminal
+    """
+
+    posts = reddit_model.get_posts_about(ticker, limit, sort, time_frame)
+    post_data = []
+    polarity_scores = []
+
+    columns = ["Title", "Polarity Score", "Subjectivity Score"]
+
+    if not posts:
+        console.print(f"No posts for {ticker} found")
+        return
+
+    console.print(f"Found {len(posts)} submissions")
+    console.print("Analyzing each post...")
+    for p in tqdm(posts):
+        texts = [p.title, p.selftext]
+        if full_search:
+            tlcs = reddit_model.get_comments(p)
+            texts.extend(tlcs)
+        preprocessed_text = reddit_model.clean_reddit_text(texts)
+        corpus_blob = TextBlob(" ".join(preprocessed_text))
+        sentiment = corpus_blob.sentiment
+        polarity_score = sentiment.polarity
+        subjectivity_score = sentiment.subjectivity
+        polarity_scores.append(polarity_score)
+        post_data.append([p.title, polarity_score, subjectivity_score])
+
+    avg_polarity = sum(polarity_scores) / len(polarity_scores)
+
+    df = pd.DataFrame(post_data, columns=columns)
+    if dump_raw_data:
+        print_rich_table(
+            df, headers=list(df.columns), show_index=False, title="Sentiment Debug Dump"
+        )
+    if graphic:
+        display_box_whisker(ticker, polarity_scores)
+
+    console.print(f"Sentiment Analysis for {ticker} is {avg_polarity}\n")
+
+    export_data(
+        export,
+        os.path.dirname(os.path.abspath(__file__)),
+        "polarity_scores",
+        df,
+    )
+
+
+@log_start_end(log=logger)
+def display_box_whisker(ticker: str, scores: List[float]):
+    """Display box and whisker plot for sentiment scores of each post
+
+    Parameters
+    ----------
+    ticker: str
+        ticker symbol
+    scores: List[float]
+        sentiment scores of each post
+    """
+    boxplot = sns.boxplot(x=scores)
+    boxplot.set(title=f"Sentiment Score of {ticker}")
+    plt.xlabel("Sentiment Score")
