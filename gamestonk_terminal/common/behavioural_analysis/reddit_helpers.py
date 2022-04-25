@@ -170,10 +170,10 @@ def sector_to_subreddit_list(sector: str) -> List[str]:
         List of subreddits
     """
     sector_subreddit_map = {
-        "Basic Materials": [],
-        "Communication Services": [],
-        "Consumer Cyclical": [],
-        "Consumer Defensive": [],
+        "Basic Materials": [""],
+        "Communication Services": [""],
+        "Consumer Cyclical": [""],
+        "Consumer Defensive": [""],
         "Energy": [
             "energy",
             "RenewableEnergy",
@@ -188,7 +188,7 @@ def sector_to_subreddit_list(sector: str) -> List[str]:
             "healthcare",
             "globalhealth",
         ],
-        "Industrials": [],
+        "Industrials": [""],
         "Real Estate": [
             "realestate",
             "realestateinvesting",
@@ -197,12 +197,12 @@ def sector_to_subreddit_list(sector: str) -> List[str]:
             "technology",
             "tech",
         ],
-        "Utilities": [],
+        "Utilities": [""],
     }
 
     if sector in sector_subreddit_map:
         return sector_subreddit_map[sector]
-    return []
+    return [""]
 
 
 def quote_type_to_subreddit_list(quote_type: str) -> List[str]:
@@ -219,15 +219,15 @@ def quote_type_to_subreddit_list(quote_type: str) -> List[str]:
         List of subreddits
     """
     quote_type_subreddit_map = {
-        "EQUITY": [],
+        "EQUITY": [""],
         "CRYPTOCURRENCY": [
             "cryptocurrencies",
             "cryptotechnology",
             "cryptomarkets",
             "binance",
         ],
-        "ETF": [],
+        "ETF": [""],
     }
     if quote_type in quote_type_subreddit_map:
         return quote_type_subreddit_map[quote_type]
-    return []
+    return [""]
