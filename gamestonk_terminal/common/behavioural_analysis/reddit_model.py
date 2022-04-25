@@ -4,10 +4,12 @@ __docformat__ = "numpy"
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
+import random
 
 import finviz
 import pandas as pd
 import praw
+from nltk.corpus import stopwords
 from prawcore.exceptions import ResponseException
 from psaw import PushshiftAPI
 from requests import HTTPError
@@ -602,14 +604,15 @@ def prepare_corpus(docs: List[str]) -> List[str]:
         List of cleaned and prepared docs
     """
     docs = [doc.lower().strip() for doc in docs]
-
+    stop_words = set(stopwords.words('english'))
     def clean_text(doc):
+        #out = [word for word in doc.split(" ") if ((word not in stop_words) and (word.isalpha() or word.isspace()))]    
         out = []
-        for c in doc:
-            if c.isalpha() or c.isspace():
-                out.append(c)
-        return "".join(out)
-
+        for word in doc.split(" "):
+            if word not in stop_words and (word.isalpha() or word.isspace()):
+                out.append(word)
+        return " ".join(out)
+    
     docs = [clean_text(doc) for doc in docs]
     return docs
 
