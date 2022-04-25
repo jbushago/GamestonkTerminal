@@ -200,7 +200,9 @@ def sector_to_subreddit_list(sector: str) -> List[str]:
         "Utilities": [],
     }
 
-    return sector_subreddit_map[sector]
+    if sector in sector_subreddit_map:
+        return sector_subreddit_map[sector]
+    return []
 
 
 def quote_type_to_subreddit_list(quote_type: str) -> List[str]:
@@ -226,5 +228,6 @@ def quote_type_to_subreddit_list(quote_type: str) -> List[str]:
         ],
         "ETF": [],
     }
-
-    return quote_type_subreddit_map[quote_type]
+    if quote_type in quote_type_subreddit_map:
+        return quote_type_subreddit_map[quote_type]
+    return []
