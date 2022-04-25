@@ -19,7 +19,10 @@ from tqdm import tqdm
 
 from gamestonk_terminal import config_terminal as cfg
 from gamestonk_terminal.common.behavioural_analysis.reddit_helpers import (
-    find_tickers, get_subreddits_for_ticker, ticker_to_name)
+    find_tickers,
+    get_subreddits_for_ticker,
+    ticker_to_name,
+)
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.rich_config import console
 
