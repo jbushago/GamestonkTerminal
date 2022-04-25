@@ -553,8 +553,11 @@ def get_posts_about(
     posts = [p for p in posts if p.selftext]
     return posts
 
+
 @log_start_end(log=logger)
-def get_comments(posts: List[praw.models.reddit.submission.Submission]) -> List[praw.models.reddit.comment.Comment]:
+def get_comments(
+    posts: List[praw.models.reddit.submission.Submission],
+) -> List[praw.models.reddit.comment.Comment]:
     """Cleans and prepares a list of documents for sentiment analysis
 
     Parameters
@@ -567,6 +570,7 @@ def get_comments(posts: List[praw.models.reddit.submission.Submission]) -> List[
     List[praw.models.reddit.comment.Comment]
         List of all the text from each comment
     """
+
     def get_more_comments(comments):
         sub_tlcs = []
         for comment in comments:
@@ -604,15 +608,15 @@ def prepare_corpus(docs: List[str]) -> List[str]:
         List of cleaned and prepared docs
     """
     docs = [doc.lower().strip() for doc in docs]
-    stop_words = set(stopwords.words('english'))
+    stop_words = set(stopwords.words("english"))
+
     def clean_text(doc):
-        #out = [word for word in doc.split(" ") if ((word not in stop_words) and (word.isalpha() or word.isspace()))]    
+        # out = [word for word in doc.split(" ") if ((word not in stop_words) and (word.isalpha() or word.isspace()))]
         out = []
         for word in doc.split(" "):
             if word not in stop_words and (word.isalpha() or word.isspace()):
                 out.append(word)
         return " ".join(out)
-    
+
     docs = [clean_text(doc) for doc in docs]
     return docs
-

@@ -302,13 +302,14 @@ def display_reddit_sent(
     if dump_raw_data:
         for post in posts:
             console.print(post.selftext)
-    texts = [p.selftext for p in posts]    
+    texts = [p.selftext for p in posts]
     tlcs = reddit_model.get_comments(posts)
     texts.extend(tlcs)
     corpus = reddit_model.prepare_corpus(texts)
     if dump_preprocessed_data:
         for doc in corpus:
             console.print(doc)
-    corpus_blob = TextBlob(''.join(corpus))
-    console.print(f"Sentiment Analysis for {search} is {corpus_blob.sentiment.polarity}")
-    
+    corpus_blob = TextBlob("".join(corpus))
+    console.print(
+        f"Sentiment Analysis for {search} is {corpus_blob.sentiment.polarity}"
+    )
