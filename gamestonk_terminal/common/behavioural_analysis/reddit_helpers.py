@@ -111,11 +111,12 @@ def ticker_to_name(ticker: str) -> str:
         "Ltd.",
         "LLC",
     }
+    exp = re.compile('[^a-zA-Z]')
     name = yf.Ticker(ticker).info["shortName"].split(" ")
     cleaned_name = []
     for word in name:
         if word not in suffixes:
-            cleaned_name.append(word)
+            cleaned_name.append(exp.sub("", word))
 
     return " ".join(cleaned_name)
 
@@ -156,7 +157,7 @@ def get_ticker_quote_type(ticker: str) -> str:
     return info["quoteType"] if "quoteType" in info else ""
 
 
-def sector_to_subreddit_list(sector: str) -> List[str]:
+def sector_to_subreddit_list(sector: str) -> List:
     """Returns list of subreddit for respective sector
 
     Parameters
@@ -166,14 +167,14 @@ def sector_to_subreddit_list(sector: str) -> List[str]:
 
     Returns
     -------
-    List[str]
+    List
         List of subreddits
     """
     sector_subreddit_map = {
-        "Basic Materials": [""],
-        "Communication Services": [""],
-        "Consumer Cyclical": [""],
-        "Consumer Defensive": [""],
+        "Basic Materials": [],
+        "Communication Services": [],
+        "Consumer Cyclical": [],
+        "Consumer Defensive": [],
         "Energy": [
             "energy",
             "RenewableEnergy",
@@ -188,7 +189,7 @@ def sector_to_subreddit_list(sector: str) -> List[str]:
             "healthcare",
             "globalhealth",
         ],
-        "Industrials": [""],
+        "Industrials": [],
         "Real Estate": [
             "realestate",
             "realestateinvesting",
@@ -197,15 +198,15 @@ def sector_to_subreddit_list(sector: str) -> List[str]:
             "technology",
             "tech",
         ],
-        "Utilities": [""],
+        "Utilities": [],
     }
 
     if sector in sector_subreddit_map:
         return sector_subreddit_map[sector]
-    return [""]
+    return []
 
 
-def quote_type_to_subreddit_list(quote_type: str) -> List[str]:
+def quote_type_to_subreddit_list(quote_type: str) -> List:
     """Returns list of subreddit for respective quote type
 
     Parameters
@@ -215,19 +216,19 @@ def quote_type_to_subreddit_list(quote_type: str) -> List[str]:
 
     Returns
     -------
-    List[str]
+    List
         List of subreddits
     """
     quote_type_subreddit_map = {
-        "EQUITY": [""],
+        "EQUITY": [],
         "CRYPTOCURRENCY": [
             "cryptocurrencies",
             "cryptotechnology",
             "cryptomarkets",
             "binance",
         ],
-        "ETF": [""],
+        "ETF": [],
     }
     if quote_type in quote_type_subreddit_map:
         return quote_type_subreddit_map[quote_type]
-    return [""]
+    return []

@@ -9,13 +9,14 @@ import finviz
 import nltk
 import pandas as pd
 import praw
+
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 from prawcore.exceptions import ResponseException
 from psaw import PushshiftAPI
 from requests import HTTPError
 from tqdm import tqdm
-
 
 from gamestonk_terminal import config_terminal as cfg
 from gamestonk_terminal.common.behavioural_analysis.reddit_helpers import (
@@ -667,7 +668,7 @@ def prepare_corpus(docs: List[str]) -> List[str]:
 
 
 @log_start_end(log=logger)
-def clean_reddit_text(docs: List[str]) -> List[str]:
+def clean_reddit_text(docs: List[str]) -> str:
     """Tokenizes and cleans a list of documents for sentiment analysis
 
     Parameters
@@ -677,20 +678,26 @@ def clean_reddit_text(docs: List[str]) -> List[str]:
 
     Returns
     -------
-    List[str]
-        List of cleaned and prepared docs
+    str
+        string of cleande output
     """
+    text = " ".join(docs)
     nltk.download("stopwords", quiet=True)
+    nltk.download("wordnet", quiet=True)
+    nltk.download("omw-1.4", quiet=True)
+    #nltk.download("punkt", quiet=True)
     stop_words = set(stopwords.words("english"))
+    
     tk = RegexpTokenizer(r"[A-Za-z\']+")
+    lm = WordNetLemmatizer()
 
-    clean = []
-    for d in docs:
-        # remove links
-        tokens = tk.tokenize(d)
+    #word_list = word_tokenize(text)
+    word_list = tk.tokenize(text)
+    cleaned_list = []
+    for word in word_list:
+        lowercase = word.lower()
+        if lowercase not in stop_words:
+            cleaned_list.append(lowercase)
+    lm_str = " ".join(lm.lemmatize(w) for w in word_list)
 
-        for word in tokens:
-            tmp = word.lower()
-            if tmp not in stop_words:
-                clean.append(tmp)
-    return clean
+    return lm_str

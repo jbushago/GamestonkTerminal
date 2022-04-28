@@ -9,11 +9,13 @@ from typing import Dict, List
 
 import finviz
 import matplotlib.pyplot as plt
+from numpy import negative
 import pandas as pd
 import praw
 from textblob import TextBlob
 import seaborn as sns
 from tqdm import tqdm
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from gamestonk_terminal.common.behavioural_analysis import reddit_model
 from gamestonk_terminal.decorators import log_start_end
@@ -305,9 +307,9 @@ def display_reddit_sent(
 
     posts = reddit_model.get_posts_about(ticker, limit, sort, time_frame)
     post_data = []
-    polarity_scores = []
+    compound_scores = []
 
-    columns = ["Title", "Polarity Score", "Subjectivity Score"]
+    columns = ["Title", "pos", "neu", "neg", "compound"]
 
     if not posts:
         console.print(f"No posts for {ticker} found")
@@ -321,14 +323,23 @@ def display_reddit_sent(
             tlcs = reddit_model.get_comments(p)
             texts.extend(tlcs)
         preprocessed_text = reddit_model.clean_reddit_text(texts)
-        corpus_blob = TextBlob(" ".join(preprocessed_text))
-        sentiment = corpus_blob.sentiment
-        polarity_score = sentiment.polarity
-        subjectivity_score = sentiment.subjectivity
-        polarity_scores.append(polarity_score)
-        post_data.append([p.title, polarity_score, subjectivity_score])
+        console.print(preprocessed_text)
+        analyzer = SentimentIntensityAnalyzer()
+        sentiment = analyzer.polarity_scores(preprocessed_text)
+        positive_score = sentiment["pos"]
+        neutral_score = sentiment["neu"]
+        negative_score = sentiment["neg"]
+        compound_score = sentiment["compound"]
+        # corpus_blob = TextBlob(preprocessed_text)
+        # sentiment = corpus_blob.sentiment
+        # polarity_score = sentiment.polarity
+        # subjectivity_score = sentiment.subjectivity
+        compound_scores.append(compound_score)
+        post_data.append(
+            [p.title, positive_score, neutral_score, negative_score, compound_score]
+        )
 
-    avg_polarity = sum(polarity_scores) / len(polarity_scores)
+    avg_score = sum(compound_scores) / len(compound_scores)
 
     df = pd.DataFrame(post_data, columns=columns)
     if dump_raw_data:
@@ -336,14 +347,14 @@ def display_reddit_sent(
             df, headers=list(df.columns), show_index=False, title="Sentiment Debug Dump"
         )
     if graphic:
-        display_box_whisker(ticker, polarity_scores)
+        display_box_whisker(ticker, compound_scores)
 
-    console.print(f"Sentiment Analysis for {ticker} is {avg_polarity}\n")
+    console.print(f"\nSentiment score for {ticker} is {avg_score}\n")
 
     export_data(
         export,
         os.path.dirname(os.path.abspath(__file__)),
-        "polarity_scores",
+        f"{ticker}_sentiment",
         df,
     )
 
@@ -360,5 +371,5 @@ def display_box_whisker(ticker: str, scores: List[float]):
         sentiment scores of each post
     """
     boxplot = sns.boxplot(x=scores)
-    boxplot.set(title=f"Sentiment Score of {ticker}")
-    plt.xlabel("Sentiment Score")
+    boxplot.set(title=f"Sentiment Score of Submissions for {ticker}")
+    plt.xlabel("Sentiment Scores")
