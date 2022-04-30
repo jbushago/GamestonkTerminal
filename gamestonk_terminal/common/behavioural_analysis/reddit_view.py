@@ -9,10 +9,8 @@ from typing import Dict, List
 
 import finviz
 import matplotlib.pyplot as plt
-from numpy import negative
 import pandas as pd
 import praw
-from textblob import TextBlob
 import seaborn as sns
 from tqdm import tqdm
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
