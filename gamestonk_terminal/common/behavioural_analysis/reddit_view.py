@@ -323,7 +323,7 @@ def display_reddit_sent(
             tlcs = reddit_model.get_comments(p)
             texts.extend(tlcs)
         preprocessed_text = reddit_model.clean_reddit_text(texts)
-        console.print(preprocessed_text)
+        # console.print(preprocessed_text)
         analyzer = SentimentIntensityAnalyzer()
         sentiment = analyzer.polarity_scores(preprocessed_text)
         positive_score = sentiment["pos"]

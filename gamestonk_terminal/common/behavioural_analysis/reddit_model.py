@@ -685,13 +685,13 @@ def clean_reddit_text(docs: List[str]) -> str:
     nltk.download("stopwords", quiet=True)
     nltk.download("wordnet", quiet=True)
     nltk.download("omw-1.4", quiet=True)
-    #nltk.download("punkt", quiet=True)
+    # nltk.download("punkt", quiet=True)
     stop_words = set(stopwords.words("english"))
-    
+
     tk = RegexpTokenizer(r"[A-Za-z\']+")
     lm = WordNetLemmatizer()
 
-    #word_list = word_tokenize(text)
+    # word_list = word_tokenize(text)
     word_list = tk.tokenize(text)
     cleaned_list = []
     for word in word_list:

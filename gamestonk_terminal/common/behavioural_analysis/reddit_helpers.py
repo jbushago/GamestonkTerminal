@@ -111,7 +111,7 @@ def ticker_to_name(ticker: str) -> str:
         "Ltd.",
         "LLC",
     }
-    exp = re.compile('[^a-zA-Z]')
+    exp = re.compile("[^a-zA-Z]")
     name = yf.Ticker(ticker).info["shortName"].split(" ")
     cleaned_name = []
     for word in name:
