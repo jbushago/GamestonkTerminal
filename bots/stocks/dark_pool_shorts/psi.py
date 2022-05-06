@@ -1,19 +1,23 @@
+import logging
+
 import plotly.graph_objects as go
 import yfinance as yf
 from plotly.subplots import make_subplots
 
-import bots.config_discordbot as cfg
-from bots.config_discordbot import logger
-from bots import helpers
+from bots import imps
+from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.stocks.dark_pool_shorts import stockgrid_model
 
+logger = logging.getLogger(__name__)
 
+
+@log_start_end(log=logger)
 def psi_command(ticker: str = ""):
     """Price vs short interest volume [Stockgrid]"""
 
     # Debug user input
-    if cfg.DEBUG:
-        logger.debug("dps-psi %s", ticker)
+    if imps.DEBUG:
+        logger.debug("dps psi %s", ticker)
 
     # Check for argument
     if ticker == "":
@@ -29,7 +33,7 @@ def psi_command(ticker: str = ""):
     df, prices = stockgrid_model.get_short_interest_volume(ticker)
 
     # Debug user output
-    if cfg.DEBUG:
+    if imps.DEBUG:
         logger.debug(df.to_string())
 
     # Output data
@@ -89,18 +93,21 @@ def psi_command(ticker: str = ""):
         col=1,
         secondary_y=False,
     )
+    if imps.PLT_WATERMARK:
+        fig.add_layout_image(imps.PLT_WATERMARK)
     fig.update_traces(hovertemplate="%{y:.2f}")
     fig.update_xaxes(showspikes=True, spikesnap="cursor", spikemode="across")
     fig.update_yaxes(showspikes=True, spikethickness=2)
     fig.update_layout(
         margin=dict(l=10, r=0, t=40, b=20),
-        template=cfg.PLT_TA_STYLE_TEMPLATE,
-        colorway=cfg.PLT_TA_COLORWAY,
+        template=imps.PLT_TA_STYLE_TEMPLATE,
+        colorway=imps.PLT_TA_COLORWAY,
         title=f"Price vs Short Volume Interest for {ticker}",
         title_x=0.45,
         yaxis_title="Stock Price ($)",
         yaxis2_title="FINRA Volume [M]",
         yaxis3_title="Short Vol. %",
+        font=imps.PLT_FONT,
         yaxis=dict(
             side="right",
             fixedrange=False,
@@ -133,22 +140,20 @@ def psi_command(ticker: str = ""):
         spikedistance=1000,
         hoverdistance=100,
     )
-    config = dict({"scrollZoom": True})
+
     imagefile = "dps_psi.png"
 
     # Check if interactive settings are enabled
     plt_link = ""
-    if cfg.INTERACTIVE:
-        html_ran = helpers.uuid_get()
-        fig.write_html(f"in/psi_{html_ran}.html", config=config)
-        plt_link = f"[Interactive]({cfg.INTERACTIVE_URL}/psi_{html_ran}.html)"
+    if imps.INTERACTIVE:
+        plt_link = imps.inter_chart(fig, imagefile, callback=False)
 
     fig.update_layout(
         width=800,
         height=500,
     )
 
-    imagefile = helpers.image_border(imagefile, fig=fig)
+    imagefile = imps.image_border(imagefile, fig=fig)
 
     return {
         "title": f"Stocks: [Stockgrid] Price vs Short Interest Volume {ticker}",

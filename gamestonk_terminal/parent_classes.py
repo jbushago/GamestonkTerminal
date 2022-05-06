@@ -26,6 +26,7 @@ from gamestonk_terminal.helper_funcs import (
     valid_date,
     parse_known_args_and_warn,
     valid_date_in_past,
+    set_command_location,
 )
 from gamestonk_terminal.config_terminal import theme
 from gamestonk_terminal.rich_config import console
@@ -133,7 +134,12 @@ class BaseController(metaclass=ABCMeta):
 
     def log_queue(self, message: str) -> None:
         if self.queue:
-            logger.info("%s: %s", message, "/".join(self.queue))
+            logger.info(
+                "%s: {path: '%s', queue: '%s'}",
+                message,
+                self.PATH,
+                "/".join(self.queue),
+            )
 
     @log_start_end(log=logger)
     def switch(self, an_input: str) -> List[str]:
@@ -176,7 +182,14 @@ class BaseController(metaclass=ABCMeta):
                 elif known_args.cmd == "r":
                     known_args.cmd = "reset"
 
-            logger.info("CMD: %s", an_input)
+            set_command_location(f"{self.PATH}{known_args.cmd}")
+            logger.info(
+                "CMD: {path: '%s', known_cmd: '%s', other_args: '%s' input: '%s'}",
+                self.PATH,
+                known_args.cmd,
+                str(other_args),
+                an_input,
+            )
             self.log_queue("QUEUE")
 
             # This is what mutes portfolio issue
@@ -226,7 +239,7 @@ class BaseController(metaclass=ABCMeta):
     @log_start_end(log=logger)
     def call_reset(self, _) -> None:
         """Process reset command. If you would like to have customization in the
-        reset process define a methom `custom_reset` in the child class.
+        reset process define a method `custom_reset` in the child class.
         """
         if self.PATH != "/":
             if self.custom_reset():
@@ -306,6 +319,11 @@ class BaseController(metaclass=ABCMeta):
                 self.queue = self.switch(an_input)
 
             except SystemExit:
+                logger.exception(
+                    "The command '%s' doesn't exist on the %s menu.",
+                    an_input,
+                    self.PATH,
+                )
                 console.print(
                     f"\nThe command '{an_input}' doesn't exist on the {self.PATH} menu.",
                     end="",
@@ -329,7 +347,7 @@ class BaseController(metaclass=ABCMeta):
                         an_input = candidate_input
                     else:
                         an_input = similar_cmd[0]
-
+                    logger.warning("Replacing by %s", an_input)
                     console.print(f" Replacing by '{an_input}'.")
                     self.queue.insert(0, an_input)
                 else:
@@ -411,6 +429,30 @@ class StockBaseController(BaseController, metaclass=ABCMeta):
             help="Pre/After market hours. Only works for 'yf' source, and intraday data",
         )
         parser.add_argument(
+            "-f",
+            "--file",
+            default=None,
+            help="Path to load custom file.",
+            dest="filepath",
+            type=str,
+        )
+        parser.add_argument(
+            "-m",
+            "--monthly",
+            action="store_true",
+            default=False,
+            help="Load monthly data",
+            dest="monthly",
+        )
+        parser.add_argument(
+            "-w",
+            "--weekly",
+            action="store_true",
+            default=False,
+            help="Load weekly data",
+            dest="weekly",
+        )
+        parser.add_argument(
             "-r",
             "--iexrange",
             dest="iexrange",
@@ -423,15 +465,47 @@ class StockBaseController(BaseController, metaclass=ABCMeta):
             other_args.insert(0, "-t")
 
         ns_parser = parse_known_args_and_warn(parser, other_args)
+
         if ns_parser:
-            df_stock_candidate = stocks_helper.load(
-                ns_parser.ticker,
-                ns_parser.start,
-                ns_parser.interval,
-                ns_parser.end,
-                ns_parser.prepost,
-                ns_parser.source,
-            )
+            if ns_parser.weekly and ns_parser.monthly:
+                console.print(
+                    "[red]Only one of monthly or weekly can be selected.[/red]\n."
+                )
+                return
+            if ns_parser.filepath is None:
+                df_stock_candidate = stocks_helper.load(
+                    ns_parser.ticker,
+                    ns_parser.start,
+                    ns_parser.interval,
+                    ns_parser.end,
+                    ns_parser.prepost,
+                    ns_parser.source,
+                    weekly=ns_parser.weekly,
+                    monthly=ns_parser.monthly,
+                )
+            else:
+                # This seems to block the .exe since the folder needs to be manually created
+                # This block basically makes sure that we only look for the file if the -f flag is used
+                # If we add files in the argparse choices, it will fail for the .exe even if no -f is used
+                try:
+                    if ns_parser.filepath not in os.listdir(
+                        os.path.join("custom_imports", "stocks")
+                    ):
+                        console.print(
+                            f"[red]{ns_parser.filepath} not found in custom_imports/stocks/ folder[/red].\n"
+                        )
+                        return
+                except Exception as e:
+                    console.print(e)
+                    return
+
+                df_stock_candidate = stocks_helper.load_custom(
+                    os.path.join(
+                        os.path.join("custom_imports", "stocks"), ns_parser.filepath
+                    )
+                )
+                if df_stock_candidate.empty:
+                    return
             if not df_stock_candidate.empty:
                 self.stock = df_stock_candidate
                 self.add_info = stocks_helper.additional_info_about_ticker(
@@ -502,7 +576,7 @@ class CryptoBaseController(BaseController, metaclass=ABCMeta):
             help="Source of data",
             dest="source",
             choices=("cp", "cg", "bin", "cb"),
-            default="cg",
+            default="cp",
             required=False,
         )
         parser.add_argument(
