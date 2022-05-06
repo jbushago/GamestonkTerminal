@@ -4,6 +4,7 @@ __docformat__ = "numpy"
 import logging
 import os
 import warnings
+from itertools import chain
 from datetime import datetime
 from typing import Dict, List
 
@@ -16,6 +17,7 @@ from tqdm import tqdm
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from gamestonk_terminal.common.behavioural_analysis import reddit_model
+from gamestonk_terminal.decorators import check_api_key
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import export_data, print_rich_table
 from gamestonk_terminal.rich_config import console
@@ -78,6 +80,15 @@ def print_and_record_reddit_post(
 
 
 @log_start_end(log=logger)
+@check_api_key(
+    [
+        "API_REDDIT_CLIENT_ID",
+        "API_REDDIT_CLIENT_SECRET",
+        "API_REDDIT_USERNAME",
+        "API_REDDIT_USER_AGENT",
+        "API_REDDIT_PASSWORD",
+    ]
+)
 def display_watchlist(num: int):
     """Print other users watchlist. [Source: Reddit]
 
@@ -116,6 +127,15 @@ def display_watchlist(num: int):
 
 
 @log_start_end(log=logger)
+@check_api_key(
+    [
+        "API_REDDIT_CLIENT_ID",
+        "API_REDDIT_CLIENT_SECRET",
+        "API_REDDIT_USERNAME",
+        "API_REDDIT_USER_AGENT",
+        "API_REDDIT_PASSWORD",
+    ]
+)
 def display_popular_tickers(
     n_top: int = 10, posts_to_look_at: int = 50, subreddits: str = "", export: str = ""
 ):
@@ -155,6 +175,15 @@ def display_popular_tickers(
 
 
 @log_start_end(log=logger)
+@check_api_key(
+    [
+        "API_REDDIT_CLIENT_ID",
+        "API_REDDIT_CLIENT_SECRET",
+        "API_REDDIT_USERNAME",
+        "API_REDDIT_USER_AGENT",
+        "API_REDDIT_PASSWORD",
+    ]
+)
 def display_spac_community(limit: int = 10, popular: bool = False):
     """Look at tickers mentioned in r/SPACs [Source: Reddit]
 
@@ -196,6 +225,15 @@ def display_spac_community(limit: int = 10, popular: bool = False):
 
 
 @log_start_end(log=logger)
+@check_api_key(
+    [
+        "API_REDDIT_CLIENT_ID",
+        "API_REDDIT_CLIENT_SECRET",
+        "API_REDDIT_USERNAME",
+        "API_REDDIT_USER_AGENT",
+        "API_REDDIT_PASSWORD",
+    ]
+)
 def display_spac(limit: int = 5):
     """Look at posts containing 'spac' in top communities
 
@@ -234,6 +272,15 @@ def display_spac(limit: int = 5):
 
 
 @log_start_end(log=logger)
+@check_api_key(
+    [
+        "API_REDDIT_CLIENT_ID",
+        "API_REDDIT_CLIENT_SECRET",
+        "API_REDDIT_USERNAME",
+        "API_REDDIT_USER_AGENT",
+        "API_REDDIT_PASSWORD",
+    ]
+)
 def display_wsb_community(limit: int = 10, new: bool = False):
     """Show WSB posts
 
@@ -251,6 +298,15 @@ def display_wsb_community(limit: int = 10, new: bool = False):
 
 
 @log_start_end(log=logger)
+@check_api_key(
+    [
+        "API_REDDIT_CLIENT_ID",
+        "API_REDDIT_CLIENT_SECRET",
+        "API_REDDIT_USERNAME",
+        "API_REDDIT_USER_AGENT",
+        "API_REDDIT_PASSWORD",
+    ]
+)
 def display_due_diligence(
     ticker: str, limit: int = 10, n_days: int = 3, show_all_flairs: bool = False
 ):
@@ -284,6 +340,7 @@ def display_reddit_sent(
     graphic: bool,
     dump_raw_data: bool = False,
     export: str = "",
+
 ):
     """Determine Reddit sentiment about a search term
 

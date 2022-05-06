@@ -13,10 +13,10 @@ from gamestonk_terminal.stocks.insider import openinsider_view
 @pytest.mark.parametrize(
     "func, text_list",
     [
-        ("red_highlight", ["MOCK_TEXT_1", "MOCK_TEXT_2"]),
-        ("yellow_highlight", ["MOCK_TEXT_1", "MOCK_TEXT_2"]),
-        ("magenta_highlight", ["MOCK_TEXT_1", "MOCK_TEXT_2"]),
-        ("green_highlight", ["MOCK_TEXT_1", "MOCK_TEXT_2"]),
+        ("lambda_red_highlight", ["MOCK_TEXT_1", "MOCK_TEXT_2"]),
+        ("lambda_yellow_highlight", ["MOCK_TEXT_1", "MOCK_TEXT_2"]),
+        ("lambda_magenta_highlight", ["MOCK_TEXT_1", "MOCK_TEXT_2"]),
+        ("lambda_green_highlight", ["MOCK_TEXT_1", "MOCK_TEXT_2"]),
     ],
 )
 def test_format_list_func(func, recorder, text_list):
@@ -67,7 +67,9 @@ def test_print_insider_filter_no_table(mocker):
 )
 def test_print_insider_data(color, mocker):
     # MOCK GTFF
-    mocker.patch.object(target=openinsider_view.gtff, attribute="USE_COLOR", new=color)
+    mocker.patch.object(
+        target=openinsider_view.rich_config, attribute="USE_COLOR", new=color
+    )
 
     # MOCK EXPORT_DATA
     mocker.patch(

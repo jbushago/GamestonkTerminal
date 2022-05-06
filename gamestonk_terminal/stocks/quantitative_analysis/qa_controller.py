@@ -2,28 +2,31 @@
 __docformat__ = "numpy"
 
 import argparse
-from typing import List
+import logging
 from datetime import datetime
+from typing import List
 
 import numpy as np
 import pandas as pd
 from prompt_toolkit.completion import NestedCompleter
-from gamestonk_terminal.rich_config import console
-from gamestonk_terminal.parent_classes import StockBaseController
-from gamestonk_terminal.common.quantitative_analysis import (
-    qa_view,
-    rolling_view,
-)
+
 from gamestonk_terminal import feature_flags as gtff
+from gamestonk_terminal.common.quantitative_analysis import qa_view, rolling_view
+from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import (
-    EXPORT_ONLY_RAW_DATA_ALLOWED,
     EXPORT_ONLY_FIGURES_ALLOWED,
+    EXPORT_ONLY_RAW_DATA_ALLOWED,
     check_positive,
     check_proportion_range,
     parse_known_args_and_warn,
+    check_list_dates,
 )
 from gamestonk_terminal.menu import session
+from gamestonk_terminal.parent_classes import StockBaseController
+from gamestonk_terminal.rich_config import console
 from gamestonk_terminal.stocks.quantitative_analysis.factors_view import capm_view
+
+logger = logging.getLogger(__name__)
 
 
 class QaController(StockBaseController):
@@ -53,10 +56,12 @@ class QaController(StockBaseController):
         "unitroot",
         "capm",
         "var",
+        "es",
     ]
 
     stock_interval = [1, 5, 15, 30, 60]
     stock_sources = ["yf", "av", "iex"]
+    distributions = ["laplace", "student_t", "logistic", "normal"]
     PATH = "/stocks/qa/"
 
     def __init__(
@@ -128,7 +133,8 @@ class QaController(StockBaseController):
     skew        rolling skewness of distribution of prices
     kurtosis    rolling kurtosis of distribution of prices
 [info]Risk:[/info]
-    var         value at risk
+    var         display value at risk
+    es          display expected shortfall
 [info]Other:[/info]
     raw         print raw data
     decompose   decomposition in cyclic-trend, season, and residuals of prices
@@ -145,6 +151,7 @@ class QaController(StockBaseController):
             return ["stocks", f"load {self.ticker}", "qa"]
         return []
 
+    @log_start_end(log=logger)
     def call_pick(self, other_args: List[str]):
         """Process pick command"""
         parser = argparse.ArgumentParser(
@@ -171,6 +178,7 @@ class QaController(StockBaseController):
             self.target = ns_parser.target
         console.print("")
 
+    @log_start_end(log=logger)
     def call_raw(self, other_args: List[str]):
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -209,6 +217,7 @@ class QaController(StockBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_summary(self, other_args: List[str]):
         """Process summary command"""
         parser = argparse.ArgumentParser(
@@ -225,13 +234,14 @@ class QaController(StockBaseController):
         if ns_parser:
             qa_view.display_summary(df=self.stock, export=ns_parser.export)
 
+    @log_start_end(log=logger)
     def call_line(self, other_args: List[str]):
         """Process line command"""
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             add_help=False,
             prog="line",
-            description="Show line plot of selected data",
+            description="Show line plot of selected data and allow to draw lines or highlight specific datetimes.",
         )
         parser.add_argument(
             "--log",
@@ -248,6 +258,20 @@ class QaController(StockBaseController):
             action="store_true",
             default=False,
         )
+        parser.add_argument(
+            "--ml",
+            help="Draw vertical line markers to highlight certain events",
+            dest="ml",
+            type=check_list_dates,
+            default="",
+        )
+        parser.add_argument(
+            "--ms",
+            help="Draw scatter markers to highlight certain events",
+            dest="ms",
+            type=check_list_dates,
+            default="",
+        )
 
         ns_parser = parse_known_args_and_warn(
             parser, other_args, export_allowed=EXPORT_ONLY_FIGURES_ALLOWED
@@ -258,8 +282,11 @@ class QaController(StockBaseController):
                 title=f"{self.ticker} {self.target}",
                 log_y=ns_parser.log,
                 draw=ns_parser.draw,
+                markers_lines=ns_parser.ml,
+                markers_scatter=ns_parser.ms,
             )
 
+    @log_start_end(log=logger)
     def call_hist(self, other_args: List[str]):
         """Process hist command"""
         parser = argparse.ArgumentParser(
@@ -282,6 +309,7 @@ class QaController(StockBaseController):
                 bins=ns_parser.n_bins,
             )
 
+    @log_start_end(log=logger)
     def call_cdf(self, other_args: List[str]):
         """Process cdf command"""
         parser = argparse.ArgumentParser(
@@ -303,6 +331,7 @@ class QaController(StockBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_bw(self, other_args: List[str]):
         """Process bwy command"""
         parser = argparse.ArgumentParser(
@@ -330,6 +359,7 @@ class QaController(StockBaseController):
                 yearly=ns_parser.year,
             )
 
+    @log_start_end(log=logger)
     def call_decompose(self, other_args: List[str]):
         """Process decompose command"""
         parser = argparse.ArgumentParser(
@@ -362,6 +392,7 @@ class QaController(StockBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_cusum(self, other_args: List[str]):
         """Process cusum command"""
         parser = argparse.ArgumentParser(
@@ -405,6 +436,7 @@ class QaController(StockBaseController):
                 drift=ns_parser.drift,
             )
 
+    @log_start_end(log=logger)
     def call_acf(self, other_args: List[str]):
         """Process acf command"""
         parser = argparse.ArgumentParser(
@@ -437,6 +469,7 @@ class QaController(StockBaseController):
                 lags=ns_parser.lags,
             )
 
+    @log_start_end(log=logger)
     def call_rolling(self, other_args: List[str]):
         """Process rolling command"""
         parser = argparse.ArgumentParser(
@@ -468,6 +501,7 @@ class QaController(StockBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_spread(self, other_args: List[str]):
         """Process spread command"""
         parser = argparse.ArgumentParser(
@@ -498,6 +532,7 @@ class QaController(StockBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_quantile(self, other_args: List[str]):
         """Process quantile command"""
         parser = argparse.ArgumentParser(
@@ -546,6 +581,7 @@ class QaController(StockBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_skew(self, other_args: List[str]):
         """Process skew command"""
         parser = argparse.ArgumentParser(
@@ -582,6 +618,7 @@ class QaController(StockBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_kurtosis(self, other_args: List[str]):
         """Process kurtosis command"""
         parser = argparse.ArgumentParser(
@@ -618,6 +655,7 @@ class QaController(StockBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_normality(self, other_args: List[str]):
         """Process normality command"""
         parser = argparse.ArgumentParser(
@@ -636,6 +674,7 @@ class QaController(StockBaseController):
                 df=self.stock, target=self.target, export=ns_parser.export
             )
 
+    @log_start_end(log=logger)
     def call_qqplot(self, other_args: List[str]):
         """Process qqplot command"""
         parser = argparse.ArgumentParser(
@@ -650,6 +689,7 @@ class QaController(StockBaseController):
         if ns_parser:
             qa_view.display_qqplot(name=self.ticker, df=self.stock, target=self.target)
 
+    @log_start_end(log=logger)
     def call_unitroot(self, other_args: List[str]):
         """Process unitroot command"""
         parser = argparse.ArgumentParser(
@@ -690,6 +730,7 @@ class QaController(StockBaseController):
                 export=ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_capm(self, other_args: List[str]):
         """Process capm command"""
         parser = argparse.ArgumentParser(
@@ -704,6 +745,7 @@ class QaController(StockBaseController):
         if ns_parser:
             capm_view(self.ticker)
 
+    @log_start_end(log=logger)
     def call_var(self, other_args: List[str]):
         """Process var command"""
         parser = argparse.ArgumentParser(
@@ -733,6 +775,16 @@ class QaController(StockBaseController):
             """,
         )
         parser.add_argument(
+            "-s",
+            "--student",
+            action="store_true",
+            default=False,
+            dest="student_t",
+            help="""
+                If one should use the student-t distribution
+            """,
+        )
+        parser.add_argument(
             "-p",
             "--percentile",
             action="store",
@@ -745,10 +797,66 @@ class QaController(StockBaseController):
         )
         ns_parser = parse_known_args_and_warn(parser, other_args)
         if ns_parser:
-            qa_view.display_var(
+            if ns_parser.adjusted and ns_parser.student_t:
+                console.print("Select the adjusted or the student_t parameter.\n")
+            else:
+                qa_view.display_var(
+                    self.stock,
+                    self.ticker,
+                    ns_parser.use_mean,
+                    ns_parser.adjusted,
+                    ns_parser.student_t,
+                    ns_parser.percentile / 100,
+                    False,
+                )
+
+    def call_es(self, other_args: List[str]):
+        """Process es command"""
+        parser = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            prog="es",
+            description="""
+                Provides Expected Shortfall (short: ES) of the selected stock.
+            """,
+        )
+        parser.add_argument(
+            "-m",
+            "--mean",
+            action="store_true",
+            default=False,
+            dest="use_mean",
+            help="If one should use the mean of the stocks return",
+        )
+        parser.add_argument(
+            "-d",
+            "--dist",
+            "--distributions",
+            dest="distributions",
+            type=str,
+            choices=self.distributions,
+            default="normal",
+            help="Distribution used for the calculations",
+        )
+        parser.add_argument(
+            "-p",
+            "--percentile",
+            action="store",
+            dest="percentile",
+            type=float,
+            default=99.9,
+            help="""
+                Percentile used for ES calculations, for example input 99.9 equals a 99.9 Percent Expected Shortfall
+            """,
+        )
+
+        ns_parser = parse_known_args_and_warn(parser, other_args)
+        if ns_parser:
+            qa_view.display_es(
                 self.stock,
-                ns_parser.use_mean,
                 self.ticker,
-                ns_parser.adjusted,
+                ns_parser.use_mean,
+                ns_parser.distributions,
                 ns_parser.percentile / 100,
+                False,
             )

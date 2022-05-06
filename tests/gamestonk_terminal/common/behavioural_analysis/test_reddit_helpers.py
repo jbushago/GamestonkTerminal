@@ -20,7 +20,6 @@ def test_find_tickers(mocked_input, expected):
     generated_tickers = reddit_helpers.find_all_body_tickers(mocked_input)
     assert set(generated_tickers) == set(expected)
 
-
 @pytest.mark.vcr
 def test_get_subreddits_for_ticker():
     ticker = "MSFT"

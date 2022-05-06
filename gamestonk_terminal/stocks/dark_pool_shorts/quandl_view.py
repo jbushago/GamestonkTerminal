@@ -9,12 +9,13 @@ import matplotlib.ticker
 import pandas as pd
 from matplotlib import pyplot as plt
 
+from gamestonk_terminal.decorators import check_api_key
 from gamestonk_terminal.config_terminal import theme
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.config_plot import PLOT_DPI
 from gamestonk_terminal.helper_funcs import (
     export_data,
-    long_number_format,
+    lambda_long_number_format,
     print_rich_table,
     plot_autoscale,
 )
@@ -56,7 +57,8 @@ def plot_short_interest(
         ax2 = ax1.twinx()
     else:
         if len(external_axes) != 2:
-            console.print("[red]Expected list of one axis item./n[/red]")
+            logger.error("Expected list of two axis items.")
+            console.print("[red]Expected list of two axis items./n[/red]")
             return
         (ax1, ax2) = external_axes
 
@@ -95,6 +97,7 @@ def plot_short_interest(
 
 
 @log_start_end(log=logger)
+@check_api_key(["API_KEY_QUANDL"])
 def short_interest(ticker: str, nyse: bool, days: int, raw: bool, export: str):
     """Plots the short interest of a stock. This corresponds to the
     number of shares that have been sold short but have not yet been
@@ -135,7 +138,7 @@ def short_interest(ticker: str, nyse: bool, days: int, raw: bool, export: str):
             "% of Volume Shorted"
         ].apply(lambda x: f"{x/100:.2%}")
         df_short_interest = df_short_interest.applymap(
-            lambda x: long_number_format(x)
+            lambda x: lambda_long_number_format(x)
         ).sort_index(ascending=False)
 
         df_short_interest.index = df_short_interest.index.date

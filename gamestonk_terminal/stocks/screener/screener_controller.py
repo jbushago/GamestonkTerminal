@@ -3,15 +3,16 @@ __docformat__ = "numpy"
 
 import argparse
 import configparser
-import os
 import datetime
+import logging
+import os
 from typing import List
 
 from prompt_toolkit.completion import NestedCompleter
-from gamestonk_terminal.rich_config import console
 
-from gamestonk_terminal.parent_classes import BaseController
 from gamestonk_terminal import feature_flags as gtff
+from gamestonk_terminal.decorators import log_start_end
+from gamestonk_terminal.helper_classes import AllowArgsWithWhiteSpace
 from gamestonk_terminal.helper_funcs import (
     EXPORT_BOTH_RAW_DATA_AND_FIGURES,
     EXPORT_ONLY_RAW_DATA_ALLOWED,
@@ -20,13 +21,17 @@ from gamestonk_terminal.helper_funcs import (
     valid_date,
 )
 from gamestonk_terminal.menu import session
+from gamestonk_terminal.parent_classes import BaseController
 from gamestonk_terminal.portfolio.portfolio_optimization import po_controller
+from gamestonk_terminal.rich_config import console
 from gamestonk_terminal.stocks.comparison_analysis import ca_controller
 from gamestonk_terminal.stocks.screener import (
+    finviz_model,
     finviz_view,
     yahoofinance_view,
-    finviz_model,
 )
+
+logger = logging.getLogger(__name__)
 
 presets_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "presets/")
 
@@ -124,6 +129,7 @@ class ScreenerController(BaseController):
         """
         console.print(text=help_text, menu="Stocks - Screener")
 
+    @log_start_end(log=logger)
     def call_view(self, other_args: List[str]):
         """Process view command"""
         parser = argparse.ArgumentParser(
@@ -184,6 +190,7 @@ class ScreenerController(BaseController):
                     console.print(f"   {signame}{(50-len(signame)) * ' '}{sigdesc}")
                 console.print("")
 
+    @log_start_end(log=logger)
     def call_set(self, other_args: List[str]):
         """Process set command"""
         parser = argparse.ArgumentParser(
@@ -208,6 +215,7 @@ class ScreenerController(BaseController):
             self.preset = ns_parser.preset
         console.print("")
 
+    @log_start_end(log=logger)
     def call_historical(self, other_args: List[str]):
         """Process historical command"""
         parser = argparse.ArgumentParser(
@@ -265,6 +273,7 @@ class ScreenerController(BaseController):
                 ns_parser.export,
             )
 
+    @log_start_end(log=logger)
     def call_overview(self, other_args: List[str]):
         """Process overview command"""
         parser = argparse.ArgumentParser(
@@ -304,11 +313,10 @@ class ScreenerController(BaseController):
         parser.add_argument(
             "-s",
             "--sort",
-            action="store",
+            action=AllowArgsWithWhiteSpace,
             dest="sort",
             default="",
             nargs="+",
-            choices=finviz_view.d_cols_to_sort["overview"],
             help="Sort elements of the table.",
         )
         if other_args and "-" not in other_args[0][0]:
@@ -316,16 +324,33 @@ class ScreenerController(BaseController):
         ns_parser = parse_known_args_and_warn(
             parser, other_args, EXPORT_ONLY_RAW_DATA_ALLOWED
         )
-        if ns_parser:
-            self.screen_tickers = finviz_view.screener(
-                loaded_preset=self.preset,
-                data_type="overview",
-                limit=ns_parser.limit,
-                ascend=ns_parser.ascend,
-                sort=ns_parser.sort,
-                export=ns_parser.export,
-            )
 
+        if ns_parser:
+            if ns_parser.sort:
+                if ns_parser.sort not in finviz_view.d_cols_to_sort["overview"]:
+                    console.print(f"{ns_parser.sort} not a valid sort choice.\n")
+                else:
+                    self.screen_tickers = finviz_view.screener(
+                        loaded_preset=self.preset,
+                        data_type="overview",
+                        limit=ns_parser.limit,
+                        ascend=ns_parser.ascend,
+                        sort=ns_parser.sort,
+                        export=ns_parser.export,
+                    )
+
+            else:
+
+                self.screen_tickers = finviz_view.screener(
+                    loaded_preset=self.preset,
+                    data_type="overview",
+                    limit=ns_parser.limit,
+                    ascend=ns_parser.ascend,
+                    sort=ns_parser.sort,
+                    export=ns_parser.export,
+                )
+
+    @log_start_end(log=logger)
     def call_valuation(self, other_args: List[str]):
         """Process valuation command"""
         parser = argparse.ArgumentParser(
@@ -365,11 +390,10 @@ class ScreenerController(BaseController):
         parser.add_argument(
             "-s",
             "--sort",
-            action="store",
             dest="sort",
             default="",
             nargs="+",
-            choices=finviz_view.d_cols_to_sort["valuation"],
+            action=AllowArgsWithWhiteSpace,
             help="Sort elements of the table.",
         )
         if other_args and "-" not in other_args[0][0]:
@@ -377,16 +401,33 @@ class ScreenerController(BaseController):
         ns_parser = parse_known_args_and_warn(
             parser, other_args, EXPORT_ONLY_RAW_DATA_ALLOWED
         )
-        if ns_parser:
-            self.screen_tickers = finviz_view.screener(
-                loaded_preset=self.preset,
-                data_type="valuation",
-                limit=ns_parser.limit,
-                ascend=ns_parser.ascend,
-                sort=ns_parser.sort,
-                export=ns_parser.export,
-            )
 
+        if ns_parser:
+            if ns_parser.sort:
+                if ns_parser.sort not in finviz_view.d_cols_to_sort["valuation"]:
+                    console.print(f"{ns_parser.sort} not a valid sort choice.\n")
+                else:
+                    self.screen_tickers = finviz_view.screener(
+                        loaded_preset=self.preset,
+                        data_type="valuation",
+                        limit=ns_parser.limit,
+                        ascend=ns_parser.ascend,
+                        sort=ns_parser.sort,
+                        export=ns_parser.export,
+                    )
+
+            else:
+
+                self.screen_tickers = finviz_view.screener(
+                    loaded_preset=self.preset,
+                    data_type="valuation",
+                    limit=ns_parser.limit,
+                    ascend=ns_parser.ascend,
+                    sort=ns_parser.sort,
+                    export=ns_parser.export,
+                )
+
+    @log_start_end(log=logger)
     def call_financial(self, other_args: List[str]):
         """Process financial command"""
         parser = argparse.ArgumentParser(
@@ -415,6 +456,7 @@ class ScreenerController(BaseController):
             default=10,
             help="Limit of stocks to print",
         )
+
         parser.add_argument(
             "-a",
             "--ascend",
@@ -426,11 +468,10 @@ class ScreenerController(BaseController):
         parser.add_argument(
             "-s",
             "--sort",
-            action="store",
+            action=AllowArgsWithWhiteSpace,
             dest="sort",
             default="",
             nargs="+",
-            choices=finviz_view.d_cols_to_sort["financial"],
             help="Sort elements of the table.",
         )
         if other_args and "-" not in other_args[0][0]:
@@ -438,16 +479,33 @@ class ScreenerController(BaseController):
         ns_parser = parse_known_args_and_warn(
             parser, other_args, EXPORT_ONLY_RAW_DATA_ALLOWED
         )
-        if ns_parser:
-            self.screen_tickers = finviz_view.screener(
-                loaded_preset=self.preset,
-                data_type="financial",
-                limit=ns_parser.limit,
-                ascend=ns_parser.ascend,
-                sort=ns_parser.sort,
-                export=ns_parser.export,
-            )
 
+        if ns_parser:
+            if ns_parser.sort:
+                if ns_parser.sort not in finviz_view.d_cols_to_sort["financial"]:
+                    console.print(f"{ns_parser.sort} not a valid sort choice.\n")
+                else:
+                    self.screen_tickers = finviz_view.screener(
+                        loaded_preset=self.preset,
+                        data_type="financial",
+                        limit=ns_parser.limit,
+                        ascend=ns_parser.ascend,
+                        sort=ns_parser.sort,
+                        export=ns_parser.export,
+                    )
+
+            else:
+
+                self.screen_tickers = finviz_view.screener(
+                    loaded_preset=self.preset,
+                    data_type="financial",
+                    limit=ns_parser.limit,
+                    ascend=ns_parser.ascend,
+                    sort=ns_parser.sort,
+                    export=ns_parser.export,
+                )
+
+    @log_start_end(log=logger)
     def call_ownership(self, other_args: List[str]):
         """Process ownership command"""
         parser = argparse.ArgumentParser(
@@ -487,11 +545,10 @@ class ScreenerController(BaseController):
         parser.add_argument(
             "-s",
             "--sort",
-            action="store",
             dest="sort",
             default="",
             nargs="+",
-            choices=finviz_view.d_cols_to_sort["ownership"],
+            action=AllowArgsWithWhiteSpace,
             help="Sort elements of the table.",
         )
         if other_args and "-" not in other_args[0][0]:
@@ -499,16 +556,34 @@ class ScreenerController(BaseController):
         ns_parser = parse_known_args_and_warn(
             parser, other_args, EXPORT_ONLY_RAW_DATA_ALLOWED
         )
-        if ns_parser:
-            self.screen_tickers = finviz_view.screener(
-                loaded_preset=self.preset,
-                data_type="ownership",
-                limit=ns_parser.limit,
-                ascend=ns_parser.ascend,
-                sort=ns_parser.sort,
-                export=ns_parser.export,
-            )
 
+        if ns_parser:
+
+            if ns_parser.sort:
+                if ns_parser.sort not in finviz_view.d_cols_to_sort["ownership"]:
+                    console.print(f"{ns_parser.sort} not a valid sort choice.\n")
+                else:
+                    self.screen_tickers = finviz_view.screener(
+                        loaded_preset=self.preset,
+                        data_type="ownership",
+                        limit=ns_parser.limit,
+                        ascend=ns_parser.ascend,
+                        sort=ns_parser.sort,
+                        export=ns_parser.export,
+                    )
+
+            else:
+
+                self.screen_tickers = finviz_view.screener(
+                    loaded_preset=self.preset,
+                    data_type="ownership",
+                    limit=ns_parser.limit,
+                    ascend=ns_parser.ascend,
+                    sort=ns_parser.sort,
+                    export=ns_parser.export,
+                )
+
+    @log_start_end(log=logger)
     def call_performance(self, other_args: List[str]):
         """Process performance command"""
         parser = argparse.ArgumentParser(
@@ -548,11 +623,10 @@ class ScreenerController(BaseController):
         parser.add_argument(
             "-s",
             "--sort",
-            action="store",
+            action=AllowArgsWithWhiteSpace,
             dest="sort",
             default="",
             nargs="+",
-            choices=finviz_view.d_cols_to_sort["performance"],
             help="Sort elements of the table.",
         )
         if other_args and "-" not in other_args[0][0]:
@@ -560,16 +634,34 @@ class ScreenerController(BaseController):
         ns_parser = parse_known_args_and_warn(
             parser, other_args, EXPORT_ONLY_RAW_DATA_ALLOWED
         )
-        if ns_parser:
-            self.screen_tickers = finviz_view.screener(
-                loaded_preset=self.preset,
-                data_type="performance",
-                limit=ns_parser.limit,
-                ascend=ns_parser.ascend,
-                sort=ns_parser.sort,
-                export=ns_parser.export,
-            )
 
+        if ns_parser:
+
+            if ns_parser.sort:
+                if ns_parser.sort not in finviz_view.d_cols_to_sort["performance"]:
+                    console.print(f"{ns_parser.sort} not a valid sort choice.\n")
+                else:
+                    self.screen_tickers = finviz_view.screener(
+                        loaded_preset=self.preset,
+                        data_type="performance",
+                        limit=ns_parser.limit,
+                        ascend=ns_parser.ascend,
+                        sort=ns_parser.sort,
+                        export=ns_parser.export,
+                    )
+
+            else:
+
+                self.screen_tickers = finviz_view.screener(
+                    loaded_preset=self.preset,
+                    data_type="performance",
+                    limit=ns_parser.limit,
+                    ascend=ns_parser.ascend,
+                    sort=ns_parser.sort,
+                    export=ns_parser.export,
+                )
+
+    @log_start_end(log=logger)
     def call_technical(self, other_args: List[str]):
         """Process technical command"""
         parser = argparse.ArgumentParser(
@@ -609,11 +701,10 @@ class ScreenerController(BaseController):
         parser.add_argument(
             "-s",
             "--sort",
-            action="store",
+            action=AllowArgsWithWhiteSpace,
             dest="sort",
             default="",
             nargs="+",
-            choices=finviz_view.d_cols_to_sort["technical"],
             help="Sort elements of the table.",
         )
         if other_args and "-" not in other_args[0][0]:
@@ -621,27 +712,46 @@ class ScreenerController(BaseController):
         ns_parser = parse_known_args_and_warn(
             parser, other_args, EXPORT_ONLY_RAW_DATA_ALLOWED
         )
-        if ns_parser:
-            self.screen_tickers = finviz_view.screener(
-                loaded_preset=self.preset,
-                data_type="technical",
-                limit=ns_parser.limit,
-                ascend=ns_parser.ascend,
-                sort=ns_parser.sort,
-                export=ns_parser.export,
-            )
 
+        if ns_parser:
+
+            if ns_parser.sort:
+                if ns_parser.sort not in finviz_view.d_cols_to_sort["technical"]:
+                    console.print(f"{ns_parser.sort} not a valid sort choice.\n")
+                else:
+                    self.screen_tickers = finviz_view.screener(
+                        loaded_preset=self.preset,
+                        data_type="technical",
+                        limit=ns_parser.limit,
+                        ascend=ns_parser.ascend,
+                        sort=ns_parser.sort,
+                        export=ns_parser.export,
+                    )
+
+            else:
+
+                self.screen_tickers = finviz_view.screener(
+                    loaded_preset=self.preset,
+                    data_type="technical",
+                    limit=ns_parser.limit,
+                    ascend=ns_parser.ascend,
+                    sort=ns_parser.sort,
+                    export=ns_parser.export,
+                )
+
+    @log_start_end(log=logger)
     def call_po(self, _):
         """Call the portfolio optimization menu with selected tickers"""
         if self.screen_tickers:
-            self.queue = po_controller.PortfolioOptimization(self.screen_tickers).menu(
-                custom_path_menu_above="/portfolio/"
-            )
+            self.queue = po_controller.PortfolioOptimizationController(
+                self.screen_tickers
+            ).menu(custom_path_menu_above="/portfolio/")
         else:
             console.print(
                 "Some tickers must be screened first through one of the presets!\n"
             )
 
+    @log_start_end(log=logger)
     def call_ca(self, _):
         """Call the comparison analysis menu with selected tickers"""
         if self.screen_tickers:

@@ -5,16 +5,16 @@ import logging
 import os
 from typing import List
 
-from gamestonk_terminal import feature_flags as gtff
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import (
     export_data,
-    financials_colored_values,
+    lambda_financials_colored_values,
     patch_pandas_text_adjustment,
     print_rich_table,
 )
 from gamestonk_terminal.rich_config import console
 from gamestonk_terminal.stocks.comparison_analysis import marketwatch_model
+from gamestonk_terminal import rich_config
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +50,9 @@ def display_income_comparison(
         df_financials_compared,
     )
 
-    if gtff.USE_COLOR:
+    if rich_config.USE_COLOR:
         df_financials_compared = df_financials_compared.applymap(
-            financials_colored_values
+            lambda_financials_colored_values
         )
         patch_pandas_text_adjustment()
 
@@ -99,9 +99,9 @@ def display_balance_comparison(
         df_financials_compared,
     )
 
-    if gtff.USE_COLOR:
+    if rich_config.USE_COLOR:
         df_financials_compared = df_financials_compared.applymap(
-            financials_colored_values
+            lambda_financials_colored_values
         )
         patch_pandas_text_adjustment()
 
@@ -151,9 +151,9 @@ def display_cashflow_comparison(
         df_financials_compared,
     )
 
-    if gtff.USE_COLOR:
+    if rich_config.USE_COLOR:
         df_financials_compared = df_financials_compared.applymap(
-            financials_colored_values
+            lambda_financials_colored_values
         )
         patch_pandas_text_adjustment()
 

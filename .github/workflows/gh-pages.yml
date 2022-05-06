@@ -29,3 +29,5 @@ jobs:
         with:
           personal_token: ${{ secrets.DEPLOY_TOKEN }}
           publish_dir: ./website/public
+
+

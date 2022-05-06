@@ -23,8 +23,8 @@ def vcr_config():
         "Mocked Value",
     ],
 )
-def test_buy_sell_ratio_color_red_green(val, recorder):
-    result_txt = fidelity_view.buy_sell_ratio_color_red_green(val=val)
+def test_lambda_buy_sell_ratio_color_red_green(val, recorder):
+    result_txt = fidelity_view.lambda_buy_sell_ratio_color_red_green(val=val)
     recorder.capture(result_txt)
 
 
@@ -33,8 +33,8 @@ def test_buy_sell_ratio_color_red_green(val, recorder):
     "val",
     ["-8.20 (-18.3363%)", "+8.20 (+18.3363%)"],
 )
-def test_dprice_change_color_red_green(val, recorder):
-    result_txt = fidelity_view.price_change_color_red_green(val=val)
+def test_lambda_price_change_color_red_green(val, recorder):
+    result_txt = fidelity_view.lambda_price_change_color_red_green(val=val)
     recorder.capture(result_txt)
 
 
@@ -45,5 +45,7 @@ def test_dprice_change_color_red_green(val, recorder):
     [True, False],
 )
 def test_orders_view(mocker, use_color):
-    mocker.patch.object(target=fidelity_view.gtff, attribute="USE_COLOR", new=use_color)
+    mocker.patch.object(
+        target=fidelity_view.rich_config, attribute="USE_COLOR", new=use_color
+    )
     fidelity_view.orders_view(num=1, export="")
