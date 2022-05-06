@@ -1,6 +1,5 @@
 import pytest
 
-
 def test_display_popular_tickers():
     pass
 
