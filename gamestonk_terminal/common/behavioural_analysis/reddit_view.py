@@ -6,13 +6,15 @@ import os
 import warnings
 from itertools import chain
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List
 
 import finviz
-from matplotlib import ticker
+import matplotlib.pyplot as plt
 import pandas as pd
 import praw
-from textblob import TextBlob
+import seaborn as sns
+from tqdm import tqdm
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from gamestonk_terminal.common.behavioural_analysis import reddit_model
 from gamestonk_terminal.decorators import check_api_key
@@ -330,41 +332,99 @@ def display_due_diligence(
 
 @log_start_end(log=logger)
 def display_reddit_sent(
-    search: str,
-    subreddits: str,
-    time: str,
+    ticker: str,
+    sort: str,
+    limit: int,
+    time_frame: str,
+    full_search: bool,
+    graphic: bool,
     dump_raw_data: bool = False,
-    dump_preprocessed_data: bool = False,
+    export: str = "",
+
 ):
     """Determine Reddit sentiment about a search term
 
     Parameters
     ----------
-    search: str
-        The term being search for in Reddit
-    subreddits: str
-        A comma deliminated string of subreddits to search through
-    time: str
-        A timeframe to limit the search to (all, year, month, week, day)
+    ticker: str
+        The ticker being search for in Reddit
+    sort: str
+        Type of search
+    time_frame: str
+        time frame for search
+    full_search: bool
+        enable comprehensive search for ticker
+    limit: str
+        Number of
     dump_raw_data: bool
         Outputs raw search results to the terminal
     """
-    posts = reddit_model.get_posts_about(
-        subreddits=list(subreddits.split(",")),
-        search=search,
-        time=time,
-    )
+
+    posts = reddit_model.get_posts_about(ticker, limit, sort, time_frame)
+    post_data = []
+    compound_scores = []
+
+    columns = ["Title", "pos", "neu", "neg", "compound"]
+
+    if not posts:
+        console.print(f"No posts for {ticker} found")
+        return
+
+    console.print(f"Found {len(posts)} submissions")
+    console.print("Analyzing each post...")
+    for p in tqdm(posts):
+        texts = [p.title, p.selftext]
+        if full_search:
+            tlcs = reddit_model.get_comments(p)
+            texts.extend(tlcs)
+        preprocessed_text = reddit_model.clean_reddit_text(texts)
+        # console.print(preprocessed_text)
+        analyzer = SentimentIntensityAnalyzer()
+        sentiment = analyzer.polarity_scores(preprocessed_text)
+        positive_score = sentiment["pos"]
+        neutral_score = sentiment["neu"]
+        negative_score = sentiment["neg"]
+        compound_score = sentiment["compound"]
+        # corpus_blob = TextBlob(preprocessed_text)
+        # sentiment = corpus_blob.sentiment
+        # polarity_score = sentiment.polarity
+        # subjectivity_score = sentiment.subjectivity
+        compound_scores.append(compound_score)
+        post_data.append(
+            [p.title, positive_score, neutral_score, negative_score, compound_score]
+        )
+
+    avg_score = sum(compound_scores) / len(compound_scores)
+
+    df = pd.DataFrame(post_data, columns=columns)
     if dump_raw_data:
-        for post in posts:
-            console.print(post.selftext)
-    texts = [p.selftext for p in posts]
-    tlcs = reddit_model.get_comments(posts)
-    texts.extend(tlcs)
-    corpus = reddit_model.prepare_corpus(texts)
-    if dump_preprocessed_data:
-        for doc in corpus:
-            console.print(doc)
-    corpus_blob = TextBlob("".join(corpus))
-    console.print(
-        f"Sentiment Analysis for {search} is {corpus_blob.sentiment.polarity}"
+        print_rich_table(
+            df, headers=list(df.columns), show_index=False, title="Sentiment Debug Dump"
+        )
+    if graphic:
+        display_box_whisker(ticker, compound_scores)
+
+    console.print(f"\nSentiment score for {ticker} is {avg_score}\n")
+
+    export_data(
+        export,
+        os.path.dirname(os.path.abspath(__file__)),
+        f"{ticker}_sentiment",
+        df,
     )
+
+
+@log_start_end(log=logger)
+def display_box_whisker(ticker: str, scores: List[float]):
+    """Display box and whisker plot for sentiment scores of each post
+
+    Parameters
+    ----------
+    ticker: str
+        ticker symbol
+    scores: List[float]
+        sentiment scores of each post
+    """
+    boxplot = sns.boxplot(x=scores)
+    boxplot.set(title=f"Sentiment Score of Submissions for {ticker}")
+    plt.xlabel("Sentiment Scores")

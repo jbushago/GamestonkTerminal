@@ -7,15 +7,24 @@ from typing import Dict, List, Tuple
 import random
 
 import finviz
+import nltk
 import pandas as pd
 import praw
+
+from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 from prawcore.exceptions import ResponseException
 from psaw import PushshiftAPI
 from requests import HTTPError
+from tqdm import tqdm
 
 from gamestonk_terminal import config_terminal as cfg
-from gamestonk_terminal.common.behavioural_analysis.reddit_helpers import find_tickers
+from gamestonk_terminal.common.behavioural_analysis.reddit_helpers import (
+    find_tickers,
+    get_subreddits_for_ticker,
+    ticker_to_name,
+)
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.rich_config import console
 
@@ -573,24 +582,30 @@ def get_due_dilligence(
 
 @log_start_end(log=logger)
 def get_posts_about(
-    subreddits: List[str], search: str, time: str
+    ticker: str, limit: int, sort: str, time_frame: str
 ) -> List[praw.models.reddit.submission.Submission]:
     """Finds posts related to a specific search term in Reddit
 
     Parameters
     ----------
-    subreddits: List[str]
-        List of strings specifying what subreddits to search through
-    search: str
-        String to search for
-    time: str
-        A timeframe to limit the search to (all, year, month, week, day)
+    ticker: str
+        Ticker to search for
+    limit: int
+        Number of posts to get per subreddit
+    sort: str
+        Searc type
+        Possibilities: "relevance", "hot", "top", "new", or "comments"
+    time_frame: str
+        Relative time of post
+        Possibilities: "hour", "day", "week", "month", "year", "all"
 
     Returns
     -------
     List[praw.models.reddit.submission.Submission]
         List of submissions related to the search term
     """
+    console.print("Authenticating PRAW API credentials")
+
     praw_api = praw.Reddit(
         client_id=cfg.API_REDDIT_CLIENT_ID,
         client_secret=cfg.API_REDDIT_CLIENT_SECRET,
@@ -598,22 +613,58 @@ def get_posts_about(
         user_agent=cfg.API_REDDIT_USER_AGENT,
         password=cfg.API_REDDIT_PASSWORD,
     )
-    sub_str = "+".join(subreddits)
-    subreddit = praw_api.subreddit(sub_str)
-    posts = subreddit.search(search, limit=100, time_filter=time)
-    posts = [p for p in posts if p.selftext]
+
+    subreddits = get_subreddits_for_ticker(ticker)
+    console.print(f"Found {len(subreddits)} subreddits to search")
+    ticker_name = ticker_to_name(ticker)
+
+    posts = []
+    post_ids = set()
+
+    def search(query: str):
+        console.print(f"Searching for: {query}")
+        for sub_str in tqdm(subreddits):
+            subreddit = praw_api.subreddit(sub_str)
+            submissions = subreddit.search(
+                query=query,
+                limit=limit,
+                sort=sort,
+                time_filter=time_frame,
+            )
+
+            for sub in submissions:
+                if (
+                    sub.selftext
+                    and sub.title
+                    and not sub.removed_by_category
+                    and sub.id not in post_ids
+                ):
+                    post_ids.add(sub.id)
+                    posts.append(sub)
+
+    search(f"title:{ticker}")
+    search(f"title:{ticker_name}")
+
+    # fallback if no posts found
+    if not posts:
+        search(ticker)
+    if not posts:
+        search(ticker_name)
+
     return posts
 
 
 @log_start_end(log=logger)
 def get_comments(
-    posts: List[praw.models.reddit.submission.Submission],
+    post: praw.models.reddit.submission.Submission,
+
 ) -> List[praw.models.reddit.comment.Comment]:
     """Cleans and prepares a list of documents for sentiment analysis
 
     Parameters
     ----------
-    comments: List[praw.models.reddit.submission.Submission]
+    post: praw.models.reddit.submission.Submission
+
         Lists of all reddit posts to extract the comments from
 
     Returns
@@ -633,14 +684,14 @@ def get_comments(
         return sub_tlcs
 
     tlcs = []
-    for p in posts:
-        if p.comments:
-            for tlc in p.comments:
-                if isinstance(tlc, praw.models.reddit.comment.Comment):
-                    tlcs.append(tlc.body)
-                else:
-                    sub_comments = get_more_comments(tlc.comments())
-                    tlcs.extend(sub_comments)
+    if post.comments:
+        for tlc in post.comments:
+            if isinstance(tlc, praw.models.reddit.comment.Comment):
+                tlcs.append(tlc.body)
+            else:
+                sub_comments = get_more_comments(tlc.comments())
+                tlcs.extend(sub_comments)
+
     return tlcs
 
 
@@ -659,15 +710,50 @@ def prepare_corpus(docs: List[str]) -> List[str]:
         List of cleaned and prepared docs
     """
     docs = [doc.lower().strip() for doc in docs]
-    stop_words = set(stopwords.words("english"))
 
     def clean_text(doc):
-        # out = [word for word in doc.split(" ") if ((word not in stop_words) and (word.isalpha() or word.isspace()))]
         out = []
-        for word in doc.split(" "):
-            if word not in stop_words and (word.isalpha() or word.isspace()):
-                out.append(word)
-        return " ".join(out)
+        for c in doc:
+            if c.isalpha() or c.isspace():
+                out.append(c)
+        return "".join(out)
 
     docs = [clean_text(doc) for doc in docs]
     return docs
+
+
+@log_start_end(log=logger)
+def clean_reddit_text(docs: List[str]) -> str:
+    """Tokenizes and cleans a list of documents for sentiment analysis
+
+    Parameters
+    ----------
+    docs: List[str]
+        A list of documents to prepare for sentiment analysis
+
+    Returns
+    -------
+    str
+        string of cleande output
+    """
+    text = " ".join(docs)
+    nltk.download("stopwords", quiet=True)
+    nltk.download("wordnet", quiet=True)
+    nltk.download("omw-1.4", quiet=True)
+    # nltk.download("punkt", quiet=True)
+    stop_words = set(stopwords.words("english"))
+
+    tk = RegexpTokenizer(r"[A-Za-z\']+")
+    lm = WordNetLemmatizer()
+
+    # word_list = word_tokenize(text)
+    word_list = tk.tokenize(text)
+    cleaned_list = []
+    for word in word_list:
+        lowercase = word.lower()
+        if lowercase not in stop_words:
+            cleaned_list.append(lowercase)
+    lm_str = " ".join(lm.lemmatize(w) for w in word_list)
+
+    return lm_str
+    stop_words = set(stopwords.words("english"))

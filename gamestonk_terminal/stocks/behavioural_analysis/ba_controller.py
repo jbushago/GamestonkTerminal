@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import List
 
-import yfinance as yf
+
 from prompt_toolkit.completion import NestedCompleter
 
 from gamestonk_terminal import feature_flags as gtff
@@ -18,6 +18,7 @@ from gamestonk_terminal.common.behavioural_analysis import (
     stocktwits_view,
     twitter_view,
 )
+
 from gamestonk_terminal.stocks.behavioural_analysis import finnhub_view, cramer_view
 from gamestonk_terminal.decorators import log_start_end
 from gamestonk_terminal.helper_funcs import (
@@ -130,6 +131,7 @@ class BehaviouralAnalysisController(StockBaseController):
         """
         console.print(text=help_text, menu="Stocks - Behavioural Analysis")
 
+
     def custom_reset(self):
         """Class specific component of reset command"""
         if self.ticker:
@@ -161,6 +163,7 @@ class BehaviouralAnalysisController(StockBaseController):
             reddit_view.display_watchlist(num=ns_parser.limit)
 
     @log_start_end(log=logger)
+
     def call_snews(self, other_args: List[str]):
         """Process snews command"""
         parser = argparse.ArgumentParser(
@@ -380,20 +383,22 @@ class BehaviouralAnalysisController(StockBaseController):
             """,
         )
         parser.add_argument(
-            "-c",
-            "--company",
+            "-s",
+            "--sort",
             action="store",
-            dest="company",
-            default=None,
-            help="explicit name of company to search for, will override ticker symbol",
+            dest="sort",
+            choices=["relevance", "hot", "top", "new", "comments"],
+            default="relevance",
+            help="search sorting type",
         )
         parser.add_argument(
-            "-s",
-            "--subreddits",
+            "-l",
+            "--limit",
             action="store",
-            dest="subreddits",
-            default="all",
-            help="comma deliminated string of subreddits to search, defaults to all",
+            dest="limit",
+            default=10,
+            type=check_positive,
+            help="how many posts to gather from each subreddit",
         )
         parser.add_argument(
             "-t",
@@ -401,48 +406,53 @@ class BehaviouralAnalysisController(StockBaseController):
             action="store",
             dest="time",
             default="week",
+            choices=["hour", "day", "week", "month", "year", "all"],
             help="time period to get posts from -- all, year, month, week, or day; defaults to day",
         )
         parser.add_argument(
+            "-f",
+            "--full_search",
+            action="store_true",
+            dest="full_search",
+            default=False,
+            help="enable comprehensive search",
+        )
+        parser.add_argument(
+            "-g",
+            "--graphic",
+            action="store_true",
+            dest="graphic",
+            default=True,
+            help="display graphic",
+        )
+        parser.add_argument(
+            "-d",
             "--dump-raw-data",
             action="store_true",
             dest="dump_raw_data",
             default=False,
             help="displays all the raw data from reddit",
         )
-        parser.add_argument(
-            "--dump-preprocessed-data",
-            action="store_true",
-            dest="dump_preprocessed_data",
-            default=False,
-            help="displays cleaned and stemmed reddit data",
-        )
         if other_args and "-" not in other_args[0][0]:
             other_args.insert(0, "-l")
-        ns_parser = parse_known_args_and_warn(parser, other_args)
+        ns_parser = parse_known_args_and_warn(
+            parser, other_args, EXPORT_BOTH_RAW_DATA_AND_FIGURES
+        )
         if ns_parser:
-            if ns_parser.company:
+            if self.ticker:
                 reddit_view.display_reddit_sent(
-                    search=ns_parser.company,
-                    subreddits=ns_parser.subreddits,
-                    time=ns_parser.time,
+                    ticker=self.ticker,
+                    sort=ns_parser.sort,
+                    limit=ns_parser.limit,
+                    graphic=ns_parser.graphic,
+                    time_frame=ns_parser.time,
+                    full_search=ns_parser.full_search,
                     dump_raw_data=ns_parser.dump_raw_data,
-                    dump_preprocessed_data=ns_parser.dump_preprocessed_data,
-                )
-            elif self.ticker and not ns_parser.company:
-                reddit_view.display_reddit_sent(
-                    search=self.ticker,
-                    subreddits=ns_parser.subreddits,
-                    time=ns_parser.time,
-                    dump_raw_data=ns_parser.dump_raw_data,
-                    dump_preprocessed_data=ns_parser.dump_preprocessed_data,
+                    export=ns_parser.export,
                 )
             else:
-                console.print(
-                    "No ticker loaded and no company specified. "
-                    "Please load using 'load <ticker>' or specify"
-                    "a company with -c <company>\n"
-                )
+                console.print("No ticker loaded. Please load using 'load <ticker>'\n")
+
 
     @log_start_end(log=logger)
     def call_bullbear(self, other_args: List[str]):
