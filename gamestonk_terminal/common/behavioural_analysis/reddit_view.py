@@ -9,8 +9,10 @@ from datetime import datetime
 from typing import Dict
 
 import finviz
+from matplotlib import ticker
 import pandas as pd
 import praw
+from textblob import TextBlob
 
 from gamestonk_terminal.common.behavioural_analysis import reddit_model
 from gamestonk_terminal.decorators import check_api_key
@@ -356,13 +358,13 @@ def display_reddit_sent(
         for post in posts:
             console.print(post.selftext)
     texts = [p.selftext for p in posts]
-    tlcs = list(
-        chain.from_iterable(
-            [[tlc.body for tlc in p.comments] for p in posts if p.comments]
-        )
-    )
+    tlcs = reddit_model.get_comments(posts)
     texts.extend(tlcs)
     corpus = reddit_model.prepare_corpus(texts)
     if dump_preprocessed_data:
         for doc in corpus:
             console.print(doc)
+    corpus_blob = TextBlob("".join(corpus))
+    console.print(
+        f"Sentiment Analysis for {search} is {corpus_blob.sentiment.polarity}"
+    )
